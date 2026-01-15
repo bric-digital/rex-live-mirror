@@ -26,6 +26,6 @@
     "typescript-eslint": "^8.13.0"
   },
   "dependencies": {
-    "@bric/webmunk-core": "*"
+    "@bric/webmunk-core": "github:bric-digital/webmunk-core#ek_dev"
   }
 }
