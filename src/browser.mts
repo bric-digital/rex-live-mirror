@@ -10,7 +10,7 @@ export interface LLMInteraction {
   type: 'question' | 'response'
   content: string
   length: number
-  url: string
+  url: string 
 }
 
 /**

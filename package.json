@@ -11,9 +11,9 @@
     "url": "git+https://github.com/bric-digital/webmunk-live-mirror.git"
   },
   "exports": {
-    "./extension": "./dist/extension.js",
-    "./browser": "./dist/browser.js",
-    "./service-worker": "./dist/service-worker.js"
+    "./extension": "./src/extension.mts",
+    "./browser": "./src/browser.mts",
+    "./service-worker": "./src/service-worker.mts"
   },
   "scripts": {
     "lint": "eslint src"
