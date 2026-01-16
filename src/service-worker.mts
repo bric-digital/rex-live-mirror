@@ -40,49 +40,8 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
             )
             console.log('[LLM Chatbot] ChatGPT capture manager initialized')
           }
-
-          this.setupMessageHandlers()
         }
       }
-    })
-  }
-
-  private setupMessageHandlers(): void {
-    // Listen for interaction batches from content script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log('[LLM Chatbot] Message received:', message.messageType)
-
-      if (message.messageType === 'llmInteractionsBatch') {
-        console.log(`[LLM Chatbot] Processing interaction batch of ${message.interactions.length} items`)
-        this.handleInteractionBatch(message.interactions)
-        sendResponse({ success: true })
-      } else if (message.messageType === 'llmChatGPTCaptureRequest') {
-        console.log('[LLM Chatbot] ChatGPT capture request received')
-        if (this.chatGPTCaptureManager) {
-          this.chatGPTCaptureManager.captureAndQueueData(message.data)
-            .then(() => sendResponse({ success: true }))
-            .catch((error) => {
-              console.error('[LLM Chatbot] Error capturing ChatGPT data:', error)
-              sendResponse({ success: false, error: error.message })
-            })
-          return true  // Async response
-        }
-      } else if (message.messageType === 'syncHistoricalChats') {
-        console.log('[LLM Chatbot] User requested historical chat sync')
-        if (this.chatGPTCaptureManager) {
-          this.chatGPTCaptureManager.syncHistoricalChatsInBackground()
-            .then(() => {
-              console.log('[LLM Chatbot] Historical sync completed')
-              sendResponse({ success: true, message: 'Historical chats synced successfully' })
-            })
-            .catch((error) => {
-              console.error('[LLM Chatbot] Error syncing historical chats:', error)
-              sendResponse({ success: false, error: error.message })
-            })
-          return true  // Async response
-        }
-      }
-      return false
     })
 
     // Listen for storage changes
@@ -93,6 +52,44 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
         this.processInteractionsForTransmission(interactions)
       }
     })
+  }
+
+  handleMessage(message:any, sender:any, sendResponse:(response:any) => void):boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+    console.log('[LLM Chatbot] Message received:', message.messageType)
+
+    if (message.messageType === 'llmInteractionsBatch') {
+      console.log(`[LLM Chatbot] Processing interaction batch of ${message.interactions.length} items`)
+      this.handleInteractionBatch(message.interactions)
+      sendResponse({ success: true })
+
+      return true
+    } else if (message.messageType === 'llmChatGPTCaptureRequest') {
+      console.log('[LLM Chatbot] ChatGPT capture request received')
+      if (this.chatGPTCaptureManager) {
+        this.chatGPTCaptureManager.captureAndQueueData(message.data)
+          .then(() => sendResponse({ success: true }))
+          .catch((error) => {
+            console.error('[LLM Chatbot] Error capturing ChatGPT data:', error)
+            sendResponse({ success: false, error: error.message })
+          })
+        return true  // Async response
+      }
+    } else if (message.messageType === 'syncHistoricalChats') {
+      console.log('[LLM Chatbot] User requested historical chat sync')
+      if (this.chatGPTCaptureManager) {
+        this.chatGPTCaptureManager.syncHistoricalChatsInBackground()
+          .then(() => {
+            console.log('[LLM Chatbot] Historical sync completed')
+            sendResponse({ success: true, message: 'Historical chats synced successfully' })
+          })
+          .catch((error) => {
+            console.error('[LLM Chatbot] Error syncing historical chats:', error)
+            sendResponse({ success: false, error: error.message })
+          })
+        return true  // Async response
+      }
+    }
+    return false
   }
 
   private handleInteractionBatch(interactions: any[]): void {
@@ -497,13 +494,6 @@ class ChatGPTCaptureManager {
         }
       })
     })
-  }
-
-  /**
-   * Helper to wait for a period (simulating page load)
-   */
-  private waitForLoad(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms))
   }
 }
 
