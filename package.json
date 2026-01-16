@@ -14,7 +14,8 @@
     "./extension": "./src/extension.mts",
     "./browser": "./src/browser.mts",
     "./service-worker": "./src/service-worker.mts",
-    "./chatbots/chatgpt": "./src/chatbots/chatgpt.ts"
+    "./chatbots/chatgpt": "./src/chatbots/chatgpt.ts",
+    "./chatbots/perplexity": "./src/chatbots/perplexity.ts"
   },
   "scripts": {
     "lint": "eslint src"

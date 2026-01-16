@@ -12,12 +12,31 @@ let parser: ChatGPTParser | null = null
 let captureEnabled = false
 let observer: MutationObserver | null = null
 let mutationDebounceTimer: number | null = null
+let sentMessageHashes: Set<string> = new Set()
+let pendingQAPair: any[] = []
+let lastResponseTime: number = 0
+let responseCompleteTimer: number | null = null
+
+/**
+ * Generate a simple hash of message content for deduplication
+ */
+function hashMessage(msg: string): string {
+  let hash = 0
+  for (let i = 0; i < msg.length; i++) {
+    const char = msg.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36)
+}
 
 /**
  * Initialize capture on page load
  */
 async function initializeCapture() {
   try {
+    console.log('[ChatGPT Content] ========== STARTING INITIALIZATION ==========')
+    console.log('[ChatGPT Content] Page URL:', window.location.href)
     console.log('[ChatGPT Content] Initializing capture...')
 
     // Always fetch fresh configuration from storage (will be updated by service worker)
@@ -49,8 +68,8 @@ async function initializeCapture() {
       return
     }
 
-    parser = new ChatGPTParser()
-    console.log('[ChatGPT Content] Parser initialized')
+    parser = new ChatGPTParser(selectors)
+    console.log('[ChatGPT Content] Parser initialized with selectors')
 
     const isLoggedIn = checkLoginState(chatgptConfig)
     console.log('[ChatGPT Content] Login state:', isLoggedIn ? 'logged-in' : 'logged-out')
@@ -98,6 +117,15 @@ function setupMessageObserver(config: any) {
   const allMatches = document.querySelectorAll(messageContainerSelector)
   console.log('[ChatGPT Content] Selector matches:', allMatches.length, 'elements')
   
+  // Seed the hash set with existing messages so we don't send them as "new"
+  if (parser) {
+    const existingMessages = parser.extractInteractions()
+    existingMessages.forEach((msg) => {
+      sentMessageHashes.add(hashMessage(msg.content))
+    })
+    console.log(`[ChatGPT Content] Seeded ${existingMessages.length} existing messages - only NEW ones will be captured`)
+  }
+  
   // Log some sample DOM to help debug
   const sampleElements = document.querySelectorAll('[data-testid*="conversation"], [data-message*=""], main, [role="main"]')
   console.log('[ChatGPT Content] Sample DOM elements found:', sampleElements.length)
@@ -112,8 +140,13 @@ function setupMessageObserver(config: any) {
     return
   }
 
-  observer = new MutationObserver(() => {
-    if (!parser || !captureEnabled) return
+  observer = new MutationObserver((mutations) => {
+    if (!parser || !captureEnabled) {
+      console.log('[ChatGPT Content] Observer triggered but capture disabled or parser missing')
+      return
+    }
+
+    console.log('[ChatGPT Content] MutationObserver triggered -', mutations.length, 'mutations')
 
     if (mutationDebounceTimer) {
       window.clearTimeout(mutationDebounceTimer)
@@ -121,38 +154,177 @@ function setupMessageObserver(config: any) {
 
     mutationDebounceTimer = window.setTimeout(() => {
       try {
-        const messages = parser!.extractInteractions()
-        if (!messages.length) return
+        const allMessages = parser!.extractInteractions()
+        console.log('[ChatGPT Content] extractInteractions() returned:', allMessages.length, 'messages')
+        if (!allMessages.length) return
 
-        // Log a sample of questions and answers (not all)
-        const sample = messages.slice(0, 2) // log up to 2 per mutation
-        sample.forEach((msg, idx) => {
-          if (msg.type === 'question') {
-            console.log(`[ChatGPT Q${idx + 1}]`, msg.content)
-          } else if (msg.type === 'response') {
-            console.log(`[ChatGPT A${idx + 1}]`, msg.content)
+        // Find NEW messages
+        const newMessages = allMessages.filter((msg) => {
+          const hash = hashMessage(msg.content)
+          if (!sentMessageHashes.has(hash)) {
+            sentMessageHashes.add(hash)
+            return true
           }
+          return false
         })
 
-        console.log(`[ChatGPT Content] Detected ${messages.length} messages`)
+        if (!newMessages.length) return
 
-        chrome.runtime.sendMessage(
-          {
-            messageType: 'llmMessageCapture',
-            platform: 'chatgpt',
-            messages,
-            url: window.location.href,
-            timestamp: Date.now(),
-            metadata: {
-              isLoggedIn: checkLoginState(config)
+        // If we're starting a new question while waiting for response, send pending pair first
+        const hasNewQuestion = newMessages.some(msg => msg.type === 'question')
+        if (hasNewQuestion && pendingQAPair.length > 0 && pendingQAPair.some(msg => msg.type === 'response')) {
+          console.log('[ChatGPT Content] New question detected - sending previous Q&A pair first')
+          // Send pending pair immediately
+          const pairToSend = [...pendingQAPair]
+          chrome.runtime.sendMessage(
+            {
+              messageType: 'llmMessageCapture',
+              platform: 'chatgpt',
+              messages: pairToSend,
+              url: window.location.href,
+              timestamp: Date.now(),
+              metadata: {
+                isLoggedIn: checkLoginState(config)
+              }
             }
-          },
-          (response?: any) => {
-            if (!response?.success) {
-              console.error('[ChatGPT Content] Failed to send messages:', response?.error)
-            }
+          )
+          pendingQAPair = []
+          if (responseCompleteTimer) {
+            window.clearTimeout(responseCompleteTimer)
+            responseCompleteTimer = null
           }
-        )
+        }
+
+        // Add new messages to pending Q&A pair
+        pendingQAPair.push(...newMessages)
+
+        // Clean up: keep only the latest question and response
+        // Find the last question
+        let lastQuestionIdx = -1
+        for (let i = pendingQAPair.length - 1; i >= 0; i--) {
+          if (pendingQAPair[i].type === 'question') {
+            lastQuestionIdx = i
+            break
+          }
+        }
+        
+        // If we have multiple questions, keep only the latest one and remove earlier ones
+        if (lastQuestionIdx > 0) {
+          pendingQAPair = pendingQAPair.slice(lastQuestionIdx)
+        }
+        
+        // Find the last response after the last question
+        let lastResponseIdx = -1
+        for (let i = pendingQAPair.length - 1; i > lastQuestionIdx; i--) {
+          if (pendingQAPair[i].type === 'response') {
+            lastResponseIdx = i
+            break
+          }
+        }
+        
+        // If we have multiple responses, keep only the latest one
+        if (lastResponseIdx > -1 && lastResponseIdx < pendingQAPair.length - 1) {
+          pendingQAPair = [
+            pendingQAPair[lastQuestionIdx],
+            pendingQAPair[lastResponseIdx]
+          ]
+        }
+
+        // Check if we have a complete Q&A pair (last message is a response)
+        const lastMsg = pendingQAPair[pendingQAPair.length - 1]
+        console.log('[ChatGPT Content] Current pending Q&A pair status:', {
+          pairLength: pendingQAPair.length,
+          lastMsgType: lastMsg?.type,
+          newMsgCount: newMessages.length,
+          messages: pendingQAPair.map(m => ({ type: m.type, len: m.content?.length }))
+        })
+        
+        if (lastMsg?.type === 'response') {
+          // Response detected - wait a bit more for it to finish streaming
+          lastResponseTime = Date.now()
+          
+          if (responseCompleteTimer) {
+            window.clearTimeout(responseCompleteTimer)
+          }
+          
+          responseCompleteTimer = window.setTimeout(() => {
+            // Response has stopped updating - send the complete Q&A pair
+            if (pendingQAPair.length > 0) {
+              const pairToSend = [...pendingQAPair]
+              
+              console.log('[ChatGPT Content] Response stream complete - sending Q&A pair with', pairToSend.length, 'messages')
+              
+              // Log the Q&A pair
+              pairToSend.forEach((msg) => {
+                if (msg.type === 'question') {
+                  console.log('[ChatGPT Content] Q:', msg.content.substring(0, 50) + '...')
+                } else {
+                  console.log('[ChatGPT Content] A:', msg.content.substring(0, 50) + '...')
+                }
+              })
+
+              console.log(`[ChatGPT Content] Sending complete Q&A pair to PDK (${pairToSend.length} messages)`)
+
+              // Bundle Q&A pair into a structured content object
+              const question = pairToSend.find(m => m.type === 'question')
+              const response = pairToSend.find(m => m.type === 'response')
+              
+              // Extract sources from the response (ChatGPT citations/references)
+              const sourceMap = new Map<string, { source_title: string; source_url: string }>()
+              const sourceElements = document.querySelectorAll('[data-testid*="citation"], a[href*="source"], [class*="source"]')
+              sourceElements.forEach((el) => {
+                const title = el.getAttribute('title') || el.textContent?.trim() || ''
+                const url = el.getAttribute('href') || ''
+                if (title && url) {
+                  // Use title+url as key to ensure uniqueness
+                  const key = `${title}||${url}`
+                  sourceMap.set(key, {
+                    source_title: title,
+                    source_url: url
+                  })
+                }
+              })
+              
+              // Convert Map to array of unique sources (no duplicates)
+              const sources = Array.from(sourceMap.values())
+              
+              const qaPayload = {
+                content: {
+                  user: question?.content || '',
+                  assistant: response?.content || '',
+                  sources: sources
+                },
+                url: window.location.href,
+                timestamp: Date.now(),
+                isLoggedIn: checkLoginState(config),
+                messageCount: pairToSend.length
+              }
+
+              chrome.runtime.sendMessage(
+                {
+                  messageType: 'llmMessageCapture',
+                  platform: 'chatgpt',
+                  payload: qaPayload,
+                  url: window.location.href,
+                  timestamp: Date.now(),
+                  metadata: {
+                    isLoggedIn: checkLoginState(config)
+                  }
+                },
+                (response?: any) => {
+                  if (response?.success) {
+                    console.log('[ChatGPT Content] Q&A pair sent to PDK successfully')
+                  } else {
+                    console.error('[ChatGPT Content] Failed to send Q&A pair:', response?.error)
+                  }
+                }
+              )
+
+              // Clear pending pair for next Q&A
+              pendingQAPair = []
+            }
+          }, config.llm_capture?.transmission_interval_ms || 1500)
+        }
       } catch (error) {
         console.error('[ChatGPT Content] Observer error:', error)
         logPDKEvent('llm-observer-error', {

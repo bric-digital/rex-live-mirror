@@ -21,72 +21,103 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   }
 
   setup(): void {
-    console.log('[LLM Chatbot] Service Worker module initializing...')
+    try {
+      console.log('[LLM Chatbot] Service Worker module initializing...')
 
-    this.pdkPlugin = passiveDataKitPlugin
+      this.pdkPlugin = passiveDataKitPlugin
 
-    // Load configuration
-    this.loadConfiguration()
+      // Load configuration
+      this.loadConfiguration()
 
-    // Listen for configuration changes
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && 'webmunkConfiguration' in changes) {
-        console.log('[LLM Chatbot] Configuration updated, reloading...')
-        this.loadConfiguration()
-      }
-    })
+      // Listen for configuration changes
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && 'webmunkConfiguration' in changes) {
+          console.log('[LLM Chatbot] Configuration updated, reloading...')
+          this.loadConfiguration()
+        }
+      })
+      
+      console.log('[LLM Chatbot] Service Worker module initialized successfully')
+    } catch (error) {
+      console.error('[LLM Chatbot] Error during setup:', error)
+    }
   }
 
   private loadConfiguration(): void {
-    // Get configuration
-    chrome.storage.local.get('webmunkConfiguration', (result) => {
-      if (result.webmunkConfiguration) {
-        const config = result.webmunkConfiguration
-        const llmConfig = config['llm_capture']
+    try {
+      // Get configuration
+      chrome.storage.local.get('webmunkConfiguration', (result) => {
+        try {
+          if (result.webmunkConfiguration) {
+            const config = result.webmunkConfiguration
+            const llmConfig = config['llm_capture']
 
-        if (llmConfig?.enabled) {
-          this.enabled = true
-          this.config = llmConfig
-          console.log('[LLM Chatbot] Service Worker module enabled')
-          console.log('[LLM Chatbot] LLM Capture Config:', llmConfig)
-          
-          // Initialize ChatGPT capture manager
-          if (llmConfig.platforms?.chatgpt?.enabled) {
-            this.chatGPTCaptureManager = new ChatGPTCaptureManager(
-              llmConfig.platforms.chatgpt,
-              this.pdkPlugin
-            )
-            console.log('[LLM Chatbot] ChatGPT capture manager initialized')
+            if (llmConfig?.enabled) {
+              this.enabled = true
+              this.config = llmConfig
+              console.log('[LLM Chatbot] Service Worker module enabled')
+              console.log('[LLM Chatbot] LLM Capture Config:', llmConfig)
+              
+              // Initialize ChatGPT capture manager
+              if (llmConfig.platforms?.chatgpt?.enabled) {
+                this.chatGPTCaptureManager = new ChatGPTCaptureManager(
+                  llmConfig.platforms.chatgpt,
+                  this.pdkPlugin
+                )
+                console.log('[LLM Chatbot] ChatGPT capture manager initialized')
+              }
+              
+              this.setupMessageHandlers()
+            }
           }
-          
-          this.setupMessageHandlers()
+        } catch (error) {
+          console.error('[LLM Chatbot] Error in storage callback:', error)
         }
-      }
-    })
+      })
+    } catch (error) {
+      console.error('[LLM Chatbot] Error loading configuration:', error)
+    }
   }
 
   private setupMessageHandlers(): void {
     // Listen for interaction batches from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log('[LLM Chatbot] Message received:', message.messageType)
-      if (message.messageType === 'llmMessageCapture' && message.platform === 'chatgpt') {
-        if (Array.isArray(message.messages)) {
-          message.messages.forEach((interaction: any) => {
-            this.processLiveInteraction({
-              source: 'chatgpt',
-              timestamp: message.timestamp || Date.now(),
-              type: interaction.type,
-              content: interaction.content,
-              length: interaction.content?.length || 0,
-              url: message.url,
-            })
+      console.log('[LLM Chatbot] Message received from content script:', message.messageType)
+      console.log('[LLM Chatbot] Message details:', {
+        messageType: message.messageType,
+        platform: message.platform,
+        sender: sender.url
+      })
+      
+      if (message.messageType === 'llmMessageCapture' && (message.platform === 'chatgpt' || message.platform === 'perplexity')) {
+        if (message.payload) {
+          console.log('[LLM Chatbot] Processing Q&A payload:', {
+            platform: message.platform,
+            userLength: message.payload.content?.user?.length || 0,
+            assistantLength: message.payload.content?.assistant?.length || 0,
+            sourcesCount: message.payload.content?.sources?.length || 0,
+            url: message.payload.url
+          })
+          
+          // Determine generator identifier based on platform
+          const generatorId = message.platform === 'perplexity' ? 'perplexity_live_mirror' : 'chatgpt_live_mirror'
+          
+          this.processLiveInteraction({
+            content: message.payload.content,
+            url: message.payload.url,
+            timestamp: message.payload.timestamp || Date.now(),
+            isLoggedIn: message.payload.isLoggedIn,
+            source: message.platform,
+            generatorId: generatorId
           })
           sendResponse({ success: true })
         } else {
-          sendResponse({ success: false, error: 'No messages array' })
+          console.error('[LLM Chatbot] Message has no payload')
+          sendResponse({ success: false, error: 'No payload' })
         }
+      } else {
+        console.warn('[LLM Chatbot] Ignoring message type:', message.messageType)
       }
-      // Ignore historical and batch messages
       return false
     })
 
@@ -105,26 +136,33 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   private processLiveInteraction(interaction: any): void {
     if (!this.pdkPlugin) return
     console.log('[LLM Chatbot] Processing live interaction for PDK transmission')
+    
+    // Use generatorId from interaction, or default to chatgpt_live_mirror
+    const generatorId = interaction.generatorId || 'chatgpt_live_mirror'
+    
     const dataPoint = {
-      generator_identifier: 'llm-chatbot-interaction',
+      name: generatorId,
       properties: {
+        content: {
+          user: interaction.content?.user || '',
+          assistant: interaction.content?.assistant || '',
+          sources: interaction.content?.sources || []
+        },
+        url: interaction.url,
+        timestamp: interaction.timestamp,
+        isLoggedIn: interaction.isLoggedIn,
+        source: interaction.source,
         'passive-data-metadata': {
           timestamp: interaction.timestamp,
           source: interaction.source,
-        },
-        interaction: {
-          type: interaction.type,
-          content: interaction.content,
-          length: interaction.content?.length || 0,
-          url: interaction.url,
-        },
-      },
+        }
+      }
     }
     try {
       this.pdkPlugin.logEvent(dataPoint)
-      console.log('[LLM Chatbot] Data point sent to PDK')
+      console.log('[LLM Chatbot] Q&A pair sent to PDK with generator:', generatorId)
     } catch (error) {
-      console.error('[LLM Chatbot] Error sending data point to PDK:', error)
+      console.error('[LLM Chatbot] Error sending Q&A pair to PDK:', error)
     }
   }
 
