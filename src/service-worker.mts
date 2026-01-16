@@ -446,14 +446,11 @@ class ChatGPTCaptureManager {
 
           // Send capture request to tab's content script
           const captured = await new Promise<any>((captureResolve, captureReject) => {
-            chrome.tabs.sendMessage(
-              tabId,
-              {
+            chrome.tabs.sendMessage(tabId, {
                 messageType: 'captureMessagesFromTab',
                 conversationId: chat.conversation_id,
                 selectors: this.config.selectors
-              },
-              (response) => {
+              }, {}, (response) => {
                 if (response?.success) {
                   captureResolve(response.data)
                 } else {
