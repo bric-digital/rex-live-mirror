@@ -7,7 +7,7 @@ import passiveDataKitPlugin from '@bric/webmunk-passive-data-kit/service-worker'
  */
 class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   private enabled: boolean = false
-  private pendingInteractions: any[] = []
+  // Removed pendingInteractions property (no batching)
   private pdkPlugin: any = null
   private config: any = null
   private chatGPTCaptureManager: ChatGPTCaptureManager | null = null
@@ -25,6 +25,19 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
 
     this.pdkPlugin = passiveDataKitPlugin
 
+    // Load configuration
+    this.loadConfiguration()
+
+    // Listen for configuration changes
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && 'webmunkConfiguration' in changes) {
+        console.log('[LLM Chatbot] Configuration updated, reloading...')
+        this.loadConfiguration()
+      }
+    })
+  }
+
+  private loadConfiguration(): void {
     // Get configuration
     chrome.storage.local.get('webmunkConfiguration', (result) => {
       if (result.webmunkConfiguration) {
@@ -56,37 +69,24 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     // Listen for interaction batches from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log('[LLM Chatbot] Message received:', message.messageType)
-      
-      if (message.messageType === 'llmInteractionsBatch') {
-        console.log(`[LLM Chatbot] Processing interaction batch of ${message.interactions.length} items`)
-        this.handleInteractionBatch(message.interactions)
-        sendResponse({ success: true })
-      } else if (message.messageType === 'llmChatGPTCaptureRequest') {
-        console.log('[LLM Chatbot] ChatGPT capture request received')
-        if (this.chatGPTCaptureManager) {
-          this.chatGPTCaptureManager.captureAndQueueData(message.data)
-            .then(() => sendResponse({ success: true }))
-            .catch((error) => {
-              console.error('[LLM Chatbot] Error capturing ChatGPT data:', error)
-              sendResponse({ success: false, error: error.message })
+      if (message.messageType === 'llmMessageCapture' && message.platform === 'chatgpt') {
+        if (Array.isArray(message.messages)) {
+          message.messages.forEach((interaction: any) => {
+            this.processLiveInteraction({
+              source: 'chatgpt',
+              timestamp: message.timestamp || Date.now(),
+              type: interaction.type,
+              content: interaction.content,
+              length: interaction.content?.length || 0,
+              url: message.url,
             })
-          return true  // Async response
-        }
-      } else if (message.messageType === 'syncHistoricalChats') {
-        console.log('[LLM Chatbot] User requested historical chat sync')
-        if (this.chatGPTCaptureManager) {
-          this.chatGPTCaptureManager.syncHistoricalChatsInBackground()
-            .then(() => {
-              console.log('[LLM Chatbot] Historical sync completed')
-              sendResponse({ success: true, message: 'Historical chats synced successfully' })
-            })
-            .catch((error) => {
-              console.error('[LLM Chatbot] Error syncing historical chats:', error)
-              sendResponse({ success: false, error: error.message })
-            })
-          return true  // Async response
+          })
+          sendResponse({ success: true })
+        } else {
+          sendResponse({ success: false, error: 'No messages array' })
         }
       }
+      // Ignore historical and batch messages
       return false
     })
 
@@ -100,58 +100,32 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     })
   }
 
-  private handleInteractionBatch(interactions: any[]): void {
-    console.log(`[LLM Chatbot] Service Worker received batch of ${interactions.length} interactions`)
+  // Removed handleInteractionBatch (no batching)
 
-    for (const interaction of interactions) {
-      // Add to pending for transmission
-      this.pendingInteractions.push({
-        source: interaction.source,
-        timestamp: interaction.timestamp,
-        type: interaction.type,
-        content: interaction.content,
-        length: interaction.length,
-        url: interaction.url,
-      })
-    }
-
-    // Process for transmission
-    this.processInteractionsForTransmission(this.pendingInteractions)
-  }
-
-  private processInteractionsForTransmission(interactions: any[]): void {
-    if (!this.pdkPlugin || interactions.length === 0) return
-
-    console.log(`[LLM Chatbot] Processing ${interactions.length} interactions for PDK transmission`)
-
-    // Format for PDK
-    for (const interaction of interactions) {
-      const dataPoint = {
-        generator_identifier: 'llm-chatbot-interaction',
-        properties: {
-          'passive-data-metadata': {
-            timestamp: interaction.timestamp,
-            source: interaction.source,
-          },
-          interaction: {
-            type: interaction.type,
-            content: interaction.content,
-            length: interaction.length,
-            url: interaction.url,
-          },
+  private processLiveInteraction(interaction: any): void {
+    if (!this.pdkPlugin) return
+    console.log('[LLM Chatbot] Processing live interaction for PDK transmission')
+    const dataPoint = {
+      generator_identifier: 'llm-chatbot-interaction',
+      properties: {
+        'passive-data-metadata': {
+          timestamp: interaction.timestamp,
+          source: interaction.source,
         },
-      }
-
-      // Send to PDK for encryption and transmission
-      console.log('[LLM Chatbot] Queuing data point for PDK transmission')
+        interaction: {
+          type: interaction.type,
+          content: interaction.content,
+          length: interaction.content?.length || 0,
+          url: interaction.url,
+        },
+      },
     }
-
-    // Clear transmitted interactions
-    chrome.storage.local.set({
-      llm_interactions: [],
-    })
-
-    this.pendingInteractions = []
+    try {
+      this.pdkPlugin.logEvent(dataPoint)
+      console.log('[LLM Chatbot] Data point sent to PDK')
+    } catch (error) {
+      console.error('[LLM Chatbot] Error sending data point to PDK:', error)
+    }
   }
 
   checkRequirement(requirement: string): Promise<boolean> {
