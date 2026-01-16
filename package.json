@@ -13,7 +13,8 @@
   "exports": {
     "./extension": "./src/extension.mts",
     "./browser": "./src/browser.mts",
-    "./service-worker": "./src/service-worker.mts"
+    "./service-worker": "./src/service-worker.mts",
+    "./chatbots/chatgpt": "./src/chatbots/chatgpt.ts"
   },
   "scripts": {
     "lint": "eslint src"
