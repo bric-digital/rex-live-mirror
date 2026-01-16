@@ -1,5 +1,4 @@
-import { WebmunkServiceWorkerModule, registerWebmunkModule } from '@bric/webmunk-core/service-worker'
-import passiveDataKitPlugin from '@bric/webmunk-passive-data-kit/service-worker'
+import { WebmunkServiceWorkerModule, registerWebmunkModule, dispatchEvent } from '@bric/webmunk-core/service-worker'
 
 /**
  * LLM Chatbot Module - Service Worker Context
@@ -8,7 +7,6 @@ import passiveDataKitPlugin from '@bric/webmunk-passive-data-kit/service-worker'
 class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   private enabled: boolean = false
   private pendingInteractions: any[] = []
-  private pdkPlugin: any = null
   private config: any = null
   private chatGPTCaptureManager: ChatGPTCaptureManager | null = null
 
@@ -23,8 +21,6 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   setup(): void {
     console.log('[LLM Chatbot] Service Worker module initializing...')
 
-    this.pdkPlugin = passiveDataKitPlugin
-
     // Get configuration
     chrome.storage.local.get('webmunkConfiguration', (result) => {
       if (result.webmunkConfiguration) {
@@ -36,16 +32,15 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
           this.config = llmConfig
           console.log('[LLM Chatbot] Service Worker module enabled')
           console.log('[LLM Chatbot] LLM Capture Config:', llmConfig)
-          
+
           // Initialize ChatGPT capture manager
           if (llmConfig.platforms?.chatgpt?.enabled) {
             this.chatGPTCaptureManager = new ChatGPTCaptureManager(
-              llmConfig.platforms.chatgpt,
-              this.pdkPlugin
+              llmConfig.platforms.chatgpt
             )
             console.log('[LLM Chatbot] ChatGPT capture manager initialized')
           }
-          
+
           this.setupMessageHandlers()
         }
       }
@@ -56,7 +51,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     // Listen for interaction batches from content script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.log('[LLM Chatbot] Message received:', message.messageType)
-      
+
       if (message.messageType === 'llmInteractionsBatch') {
         console.log(`[LLM Chatbot] Processing interaction batch of ${message.interactions.length} items`)
         this.handleInteractionBatch(message.interactions)
@@ -120,7 +115,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   }
 
   private processInteractionsForTransmission(interactions: any[]): void {
-    if (!this.pdkPlugin || interactions.length === 0) return
+    if (interactions.length === 0) return
 
     console.log(`[LLM Chatbot] Processing ${interactions.length} interactions for PDK transmission`)
 
@@ -165,12 +160,10 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
  */
 class ChatGPTCaptureManager {
   private config: any
-  private pdkPlugin: any
   private capturedConversationIds = new Set<string>()
 
-  constructor(config: any, pdkPlugin: any) {
+  constructor(config: any) {
     this.config = config
-    this.pdkPlugin = pdkPlugin
     console.log('[ChatGPT Capture] Manager initialized with config:', config)
   }
 
@@ -197,7 +190,7 @@ class ChatGPTCaptureManager {
 
       // Queue data for PDK transmission
       await this.queueForPDKTransmission(data)
-      
+
     } catch (error) {
       console.error('[ChatGPT Capture] Error in captureAndQueueData:', error)
       throw error
@@ -278,7 +271,7 @@ class ChatGPTCaptureManager {
             conversation_title: chat.title,
             url: chat.url,
             messages: capturedData.messages,
-            timestamp: new Date().toISOString()
+            date: new Date()
           })
 
         } catch (chatError) {
@@ -354,21 +347,11 @@ class ChatGPTCaptureManager {
       message_count: data.messages?.length || 0
     })
 
-    if (this.pdkPlugin) {
-      try {
-        this.pdkPlugin.logEvent({
-          name: 'llm-chat-chatgpt',
-          properties: {
-            ...data,
-            data_source: 'extension_chatgpt_capture'
-          }
-        })
-        console.log('[ChatGPT Capture] Data queued successfully for PDK')
-      } catch (error) {
-        console.error('[ChatGPT Capture] Error queuing to PDK:', error)
-        throw error
-      }
-    }
+    dispatchEvent({
+      name: 'webmunk-live-mirror',
+      ...data,
+      data_source: 'extension_chatgpt_capture'
+    })
   }
 
   /**
@@ -497,7 +480,7 @@ class ChatGPTCaptureManager {
             url: chat.url,
             messages: captured.messages,
             sync_method: 'background-tab',
-            timestamp: new Date().toISOString()
+            date: new Date()
           })
 
           console.log(`[ChatGPT Capture] Closing background tab: ${tabId}`)

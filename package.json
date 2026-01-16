@@ -1,8 +1,14 @@
 {
   "name": "@bric/webmunk-live-mirror",
   "version": "0.0.1",
-  "description": "BRIC module for capturing Q&A pairs from LLM chatbot platforms.",
-  "keywords": ["extension", "webmunk", "chatbot", "qa-capture", "llm"],
+  "description": "Webmunk module for capturing Q&A pairs from LLM chatbot platforms.",
+  "keywords": [
+    "extension",
+    "webmunk",
+    "chatbot",
+    "qa-capture",
+    "llm"
+  ],
   "author": "Behavioral Research Innovation Center",
   "type": "module",
   "homepage": "https://github.com/bric-digital/webmunk-live-mirror",
@@ -27,6 +33,6 @@
     "typescript-eslint": "^8.13.0"
   },
   "dependencies": {
-    "@bric/webmunk-core": "github:bric-digital/webmunk-core#ek_dev"
+    "@bric/webmunk-core": "github:bric-digital/webmunk-core"
   }
 }
