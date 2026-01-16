@@ -118,24 +118,20 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
 
     // Format for PDK
     for (const interaction of interactions) {
-      const dataPoint = {
-        generator_identifier: 'llm-chatbot-interaction',
-        properties: {
-          'passive-data-metadata': {
-            timestamp: interaction.timestamp,
-            source: interaction.source,
-          },
-          interaction: {
-            type: interaction.type,
-            content: interaction.content,
-            length: interaction.length,
-            url: interaction.url,
-          },
-        },
-      }
-
       // Send to PDK for encryption and transmission
       console.log('[LLM Chatbot] Queuing data point for PDK transmission')
+
+      dispatchEvent({
+        name: 'llm-chatbot-interaction',
+        date: new Date(interaction.timestamp),
+        interaction: {
+          type: interaction.type,
+          content: interaction.content,
+          length: interaction.length,
+          url: interaction.url,
+        },
+        data_source: 'extension_chatgpt_capture'
+      })
     }
 
     // Clear transmitted interactions
