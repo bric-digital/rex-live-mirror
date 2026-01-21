@@ -115,3 +115,4 @@ export class ChatGPTParser {
     
     return sources
   }
+}
