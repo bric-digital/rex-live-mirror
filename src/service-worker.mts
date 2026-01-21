@@ -11,6 +11,8 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   private pdkPlugin: any = null
   private config: any = null
   private chatGPTCaptureManager: ChatGPTCaptureManager | null = null
+  // Global deduplication across sessions using content hash
+  private sentInteractionHashes = new Set<string>()
 
   constructor() {
     super()
@@ -135,7 +137,23 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
 
   private processLiveInteraction(interaction: any): void {
     if (!this.pdkPlugin) return
-    console.log('[LLM Chatbot] Processing live interaction for PDK transmission')
+    
+    // Generate hash from Q&A content for deduplication
+    const contentHash = this.generateContentHash(
+      interaction.content?.user || '',
+      interaction.content?.assistant || ''
+    )
+    
+    // Check if we already sent this exact Q&A pair
+    if (this.sentInteractionHashes.has(contentHash)) {
+      console.log('[LLM Chatbot] Q&A pair already sent in this session, skipping duplicate:', contentHash)
+      return
+    }
+    
+    // Mark as sent
+    this.sentInteractionHashes.add(contentHash)
+    
+    console.log('[LLM Chatbot] Processing live interaction for PDK transmission, hash:', contentHash)
     
     // Use generatorId from interaction, or default to chatgpt_live_mirror
     const generatorId = interaction.generatorId || 'chatgpt_live_mirror'
@@ -164,6 +182,25 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     } catch (error) {
       console.error('[LLM Chatbot] Error sending Q&A pair to PDK:', error)
     }
+  }
+
+  /**
+   * Generate deterministic hash from Q&A content for deduplication
+   * Hash includes both question and response to ensure uniqueness
+   */
+  private generateContentHash(userContent: string, assistantContent: string): string {
+    // Simple hash: first 50 chars of question + first 50 chars of answer
+    const key = `${userContent.substring(0, 50)}_${assistantContent.substring(0, 50)}`
+    
+    // Use simple string hash (deterministic but fast)
+    let hash = 0
+    for (let i = 0; i < key.length; i++) {
+      const char = key.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash // Convert to 32bit integer
+    }
+    
+    return `hash_${Math.abs(hash)}`
   }
 
   checkRequirement(requirement: string): Promise<boolean> {

@@ -47,22 +47,42 @@ async function initializeCapture() {
     })
 
     config = stored
-    const chatgptConfig = config.llm_capture?.platforms?.chatgpt
-
-    if (!chatgptConfig?.enabled) {
-      console.log('[ChatGPT Content] ChatGPT capture not enabled in config')
+    const llmCaptureConfig = config.llm_capture || {}
+    
+    // Check if LLM capture is enabled globally
+    if (!llmCaptureConfig.enabled) {
+      console.log('[ChatGPT Content] LLM capture not enabled in config')
       return
     }
 
-    console.log('[ChatGPT Content] Config loaded:', chatgptConfig)
+    console.log('[ChatGPT Content] Config loaded:', llmCaptureConfig)
 
-    const selectors = chatgptConfig.selectors
+    // Get platform-specific selectors from platforms.chatgpt
+    const platformConfig = llmCaptureConfig.platforms?.chatgpt
+    if (!platformConfig) {
+      console.error('[ChatGPT Content] No platform configuration found')
+      await logPDKEvent('llm-selector-validation-error', {
+        platform: 'chatgpt',
+        issue: 'platform_config_missing',
+        received_config: llmCaptureConfig,
+        timestamp: Date.now()
+      })
+      return
+    }
+
+    // Check if ChatGPT capture is enabled
+    if (!platformConfig.enabled) {
+      console.log('[ChatGPT Content] ChatGPT capture not enabled')
+      return
+    }
+
+    const selectors = platformConfig.selectors
     if (!selectors || Object.keys(selectors).length === 0) {
       console.error('[ChatGPT Content] No selectors configured')
       await logPDKEvent('llm-selector-validation-error', {
         platform: 'chatgpt',
         issue: 'selectors_missing_or_invalid',
-        received_config: chatgptConfig,
+        received_config: llmCaptureConfig,
         timestamp: Date.now()
       })
       return
@@ -71,11 +91,11 @@ async function initializeCapture() {
     parser = new ChatGPTParser(selectors)
     console.log('[ChatGPT Content] Parser initialized with selectors')
 
-    const isLoggedIn = checkLoginState(chatgptConfig)
+    const isLoggedIn = checkLoginState(config)
     console.log('[ChatGPT Content] Login state:', isLoggedIn ? 'logged-in' : 'logged-out')
 
-    setupMessageObserver(chatgptConfig)
-    setupHealthChecks(chatgptConfig)
+    setupMessageObserver(config)
+    setupHealthChecks(config)
 
     captureEnabled = true
     console.log('[ChatGPT Content] Capture initialized successfully')
@@ -93,7 +113,9 @@ async function initializeCapture() {
  * Check if user is logged in
  */
 function checkLoginState(config: any): boolean {
-  const loginDetection = config.login_detection || {}
+  const llmCaptureConfig = config.llm_capture || {}
+  const platformConfig = llmCaptureConfig.platforms?.chatgpt || {}
+  const loginDetection = platformConfig.login_detection || {}
   const loggedInSelector = loginDetection.loggedInSelector
   const loggedOutSelector = loginDetection.loggedOutSelector
 
@@ -106,8 +128,10 @@ function checkLoginState(config: any): boolean {
 /**
  * Setup observer for live messages
  */
-function setupMessageObserver(config: any) {
-  const messageContainerSelector = config.selectors?.messageContainer
+function setupMessageObserver(configObj: any) {
+  const llmCaptureConfig = configObj.llm_capture || {}
+  const platformConfig = llmCaptureConfig.platforms?.chatgpt || {}
+  const messageContainerSelector = platformConfig.selectors?.messageContainer
   if (!messageContainerSelector) {
     console.error('[ChatGPT Content] messageContainer selector missing')
     return
@@ -320,10 +344,12 @@ function setupMessageObserver(config: any) {
                 }
               )
 
-              // Clear pending pair for next Q&A
+              // Clear pending pair and hashes for next Q&A
               pendingQAPair = []
+              sentMessageHashes.clear()
+              console.log('[ChatGPT Content] Cleared state for next Q&A pair')
             }
-          }, config.llm_capture?.transmission_interval_ms || 1500)
+          }, config.llm_capture?.transmission_interval_ms || 60000)
         }
       } catch (error) {
         console.error('[ChatGPT Content] Observer error:', error)
@@ -348,7 +374,8 @@ function setupMessageObserver(config: any) {
 /**
  * Setup periodic health checks
  */
-function setupHealthChecks(config: any) {
+function setupHealthChecks(configObj: any) {
+  const llmCaptureConfig = configObj.llm_capture || {}
   setInterval(() => {
     if (!captureEnabled) return
 
@@ -428,8 +455,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         return
       }
 
-      const chatgptConfig = config.llm_capture?.platforms?.chatgpt
-      const loginDetection = chatgptConfig?.login_detection || {}
+      const llmCaptureConfig = config.llm_capture || {}
+      const platformConfig = llmCaptureConfig.platforms?.chatgpt || {}
+      const loginDetection = platformConfig.login_detection || {}
 
       const loggedInSelector = loginDetection.loggedInSelector
       const loggedOutSelector = loginDetection.loggedOutSelector
