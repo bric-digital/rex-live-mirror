@@ -1,4 +1,4 @@
-import { WebmunkServiceWorkerModule, registerWebmunkModule, broadcastEvent } from '@bric/webmunk-core/service-worker'
+import { WebmunkServiceWorkerModule, registerWebmunkModule, dispatchEvent } from '@bric/webmunk-core/service-worker'
 
 /**
  * LLM Chatbot Module - Service Worker Context
@@ -121,7 +121,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
       // Send to PDK for encryption and transmission
       console.log('[LLM Chatbot] Queuing data point for PDK transmission')
 
-      broadcastEvent({
+      dispatchEvent({
         name: 'llm-chatbot-interaction',
         date: new Date(interaction.timestamp),
         interaction: {
@@ -341,7 +341,7 @@ class ChatGPTCaptureManager {
       message_count: data.messages?.length || 0
     })
 
-    broadcastEvent({
+    dispatchEvent({
       name: 'webmunk-live-mirror',
       ...data,
       data_source: 'extension_chatgpt_capture'
