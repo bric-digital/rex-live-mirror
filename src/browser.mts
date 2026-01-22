@@ -84,20 +84,27 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       return
     }
 
+    // Get platform-specific configs
+    const platforms = llmConfig.platforms || {}
+
     // Match current page to chatbot source (only if source is enabled)
     try {
       if (enabledSources.includes('perplexity') && currentURL.includes('perplexity.ai')) {
-        this.parser = new PerplexityParser()
-        console.log('[LLM Chatbot Browser] Perplexity parser initialized')
+        const perplexityConfig = platforms.perplexity || {}
+        this.parser = new PerplexityParser(perplexityConfig)
+        console.log('[LLM Chatbot Browser] Perplexity parser initialized with config')
       } else if (enabledSources.includes('chatgpt') && currentURL.includes('chatgpt.com')) {
-        this.parser = new ChatGPTParser()
-        console.log('[LLM Chatbot Browser] ChatGPT parser initialized')
+        const chatgptConfig = platforms.chatgpt || {}
+        this.parser = new ChatGPTParser(chatgptConfig)
+        console.log('[LLM Chatbot Browser] ChatGPT parser initialized with config')
       } else if (enabledSources.includes('gemini') && currentURL.includes('gemini.google.com')) {
-        this.parser = new GeminiParser()
-        console.log('[LLM Chatbot Browser] Gemini parser initialized')
+        const geminiConfig = platforms.gemini || {}
+        this.parser = new GeminiParser(geminiConfig)
+        console.log('[LLM Chatbot Browser] Gemini parser initialized with config')
       } else if (enabledSources.includes('claude') && currentURL.includes('claude.ai')) {
-        this.parser = new ClaudeParser()
-        console.log('[LLM Chatbot Browser] Claude parser initialized')
+        const claudeConfig = platforms.claude || {}
+        this.parser = new ClaudeParser(claudeConfig)
+        console.log('[LLM Chatbot Browser] Claude parser initialized with config')
       } else {
         console.log('[LLM Chatbot Browser] No matching enabled chatbot parser for URL:', currentURL)
       }
@@ -137,7 +144,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       this.processPage()
 
       // Periodic batch transmission
-      const transmissionTimer = setInterval(() => {
+      setInterval(() => {
         try {
           this.transmitBatch()
         } catch (error) {

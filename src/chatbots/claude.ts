@@ -8,43 +8,56 @@ export interface ParsedInteraction {
   content: string
 }
 
+export interface ClaudeSelectors {
+  userMessage?: string
+  assistantMessage?: string
+}
+
+export interface ClaudeConfig {
+  enabled?: boolean
+  selectors?: ClaudeSelectors
+}
+
 export class ClaudeParser {
   name = 'claude'
+  private selectors: ClaudeSelectors
+
+  constructor(config?: ClaudeConfig) {
+    // Use config selectors or defaults
+    this.selectors = config?.selectors || {
+      userMessage: '[data-is-user="true"]',
+      assistantMessage: '[data-is-user="false"]',
+    }
+    console.log('[ClaudeParser] Initialized with selectors:', this.selectors)
+  }
 
   extractInteractions(): ParsedInteraction[] {
     const interactions: ParsedInteraction[] = []
 
-    // Claude uses specific message container classes
-    const userMessages = document.querySelectorAll('[data-is-user="true"]')
-    userMessages.forEach((msg) => {
-      const content = msg.textContent?.trim()
-      if (content) {
-        interactions.push({
-          type: 'question',
-          content,
-        })
-      }
-    })
-
-    const assistantMessages = document.querySelectorAll('[data-is-user="false"]')
-    assistantMessages.forEach((msg) => {
-      const content = msg.textContent?.trim()
-      if (content) {
-        interactions.push({
-          type: 'response',
-          content,
-        })
-      }
-    })
-
-    // Fallback: Look for message divs
-    if (interactions.length === 0) {
-      const messageContainers = document.querySelectorAll('div[class*="text-base"]')
-      messageContainers.forEach((container) => {
-        const content = container.textContent?.trim()
-        if (content && content.length > 10) {
+    // Find user messages using config selector
+    if (this.selectors.userMessage) {
+      const userMessages = document.querySelectorAll(this.selectors.userMessage)
+      console.log(`[ClaudeParser] Found ${userMessages.length} user message elements`)
+      userMessages.forEach((msg) => {
+        const content = msg.textContent?.trim()
+        if (content) {
           interactions.push({
             type: 'question',
+            content,
+          })
+        }
+      })
+    }
+
+    // Find assistant messages using config selector
+    if (this.selectors.assistantMessage) {
+      const assistantMessages = document.querySelectorAll(this.selectors.assistantMessage)
+      console.log(`[ClaudeParser] Found ${assistantMessages.length} assistant message elements`)
+      assistantMessages.forEach((msg) => {
+        const content = msg.textContent?.trim()
+        if (content) {
+          interactions.push({
+            type: 'response',
             content,
           })
         }

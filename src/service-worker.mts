@@ -1,4 +1,4 @@
-import { WebmunkServiceWorkerModule, registerWebmunkModule, dispatchEvent } from '@bric/webmunk-core/service-worker'
+import { WebmunkServiceWorkerModule, registerWebmunkModule, broadcastEvent } from '@bric/webmunk-core/service-worker'
 
 /**
  * LLM Chatbot Module - Service Worker Context
@@ -121,7 +121,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
       // Send to PDK for encryption and transmission
       console.log('[LLM Chatbot] Queuing data point for PDK transmission')
 
-      dispatchEvent({
+      broadcastEvent({
         name: 'llm-chatbot-interaction',
         date: new Date(interaction.timestamp),
         interaction: {
@@ -142,7 +142,8 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     this.pendingInteractions = []
   }
 
-  checkRequirement(requirement: string): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  checkRequirement(_requirement: string): Promise<boolean> {
     return Promise.resolve(this.enabled)
   }
 }
@@ -340,7 +341,7 @@ class ChatGPTCaptureManager {
       message_count: data.messages?.length || 0
     })
 
-    dispatchEvent({
+    broadcastEvent({
       name: 'webmunk-live-mirror',
       ...data,
       data_source: 'extension_chatgpt_capture'
@@ -350,7 +351,8 @@ class ChatGPTCaptureManager {
   /**
    * Queue data for PDK transmission
    */
-  private async queueForPDKTransmission(data: any): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private async queueForPDKTransmission(_data: any): Promise<void> {
     console.log('[ChatGPT Capture] queueForPDKTransmission called')
     // Implementation continues...
   }
