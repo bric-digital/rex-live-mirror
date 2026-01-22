@@ -23,8 +23,11 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
   private parser: any = null
   private mutationObserver: MutationObserver | null = null
   private interactions: LLMInteraction[] = []
+  private capturedContentHashes: Set<string> = new Set() // Track all captured content to prevent re-capture
   private batchSize: number = 10
   private transmissionInterval: number = 60000
+  private processDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  private readonly DEBOUNCE_MS = 500 // Wait 500ms after last DOM change before processing
 
   constructor() {
     super()
@@ -122,13 +125,19 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     try {
       console.log('[LLM Chatbot Browser] Starting capture...')
 
-      // Set up mutation observer for DOM changes
+      // Set up mutation observer for DOM changes with debouncing
       this.mutationObserver = new MutationObserver(() => {
-        try {
-          this.processPage()
-        } catch (error) {
-          console.error('[LLM Chatbot Browser] Error in mutation observer callback:', error)
+        // Debounce: wait for DOM to settle before processing
+        if (this.processDebounceTimer) {
+          clearTimeout(this.processDebounceTimer)
         }
+        this.processDebounceTimer = setTimeout(() => {
+          try {
+            this.processPage()
+          } catch (error) {
+            console.error('[LLM Chatbot Browser] Error in mutation observer callback:', error)
+          }
+        }, this.DEBOUNCE_MS)
       })
 
       // Observe the entire document for changes
@@ -138,10 +147,10 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
         characterData: true,
       })
 
-      console.log('[LLM Chatbot Browser] DOM mutation observer started')
+      console.log('[LLM Chatbot Browser] DOM mutation observer started with debouncing')
 
-      // Initial page processing
-      this.processPage()
+      // Initial page processing (with small delay to let page settle)
+      setTimeout(() => this.processPage(), 1000)
 
       // Periodic batch transmission
       setInterval(() => {
@@ -158,6 +167,16 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     }
   }
 
+  /**
+   * Generate a simple hash for content deduplication
+   */
+  private hashContent(content: string, type: string): string {
+    // Use type + first 200 chars + length as a simple hash
+    // This handles cases where content might be truncated or have minor variations
+    const normalized = content.trim().substring(0, 200)
+    return `${type}:${normalized.length}:${normalized}`
+  }
+
   private processPage(): void {
     if (!this.parser) {
       console.debug('[LLM Chatbot Browser] No parser available, skipping page processing')
@@ -172,33 +191,40 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
         console.log(`[LLM Chatbot Browser] Extracted ${newInteractions.length} interactions from page`)
       }
 
+      let newCaptureCount = 0
       for (const interaction of newInteractions) {
-        // Check if we already have this interaction
-        const exists = this.interactions.some(
-          (i) =>
-            i.content === interaction.content &&
-            i.timestamp > Date.now() - 5000, // Within 5 seconds
-        )
+        // Generate hash for this content
+        const contentHash = this.hashContent(interaction.content, interaction.type)
 
-        if (!exists) {
-          const newInteraction: LLMInteraction = {
-            source: this.parser.name,
-            timestamp: Date.now(),
-            type: interaction.type,
-            content: interaction.content,
-            length: interaction.content.length,
-            url: window.location.href,
-          }
-
-          this.interactions.push(newInteraction)
-
-          console.log(
-            `[LLM Chatbot Browser] Captured ${interaction.type}: ${interaction.content.substring(0, 50)}...`,
-          )
+        // Check if we've already captured this content (using persistent Set)
+        if (this.capturedContentHashes.has(contentHash)) {
+          continue // Skip - already captured
         }
+
+        // Mark as captured
+        this.capturedContentHashes.add(contentHash)
+
+        const newInteraction: LLMInteraction = {
+          source: this.parser.name,
+          timestamp: Date.now(),
+          type: interaction.type,
+          content: interaction.content,
+          length: interaction.content.length,
+          url: window.location.href,
+        }
+
+        this.interactions.push(newInteraction)
+        newCaptureCount++
+
+        console.log(
+          `[LLM Chatbot Browser] Captured ${interaction.type}: ${interaction.content.substring(0, 50)}...`,
+        )
       }
 
-      console.debug(`[LLM Chatbot Browser] Total pending interactions: ${this.interactions.length}`)
+      if (newCaptureCount > 0) {
+        console.log(`[LLM Chatbot Browser] Captured ${newCaptureCount} new interactions (${this.capturedContentHashes.size} total unique)`)
+      }
+      console.debug(`[LLM Chatbot Browser] Pending for transmission: ${this.interactions.length}`)
     } catch (error) {
       console.error('[LLM Chatbot Browser] Error processing page:', error)
     }
