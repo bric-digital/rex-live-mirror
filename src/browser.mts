@@ -10,7 +10,8 @@ export interface LLMInteraction {
   type: 'question' | 'response'
   content: string
   length: number
-  url: string 
+  url: string
+  conversation_id?: string  // ChatGPT conversation ID (extracted from URL when available)
 }
 
 /**
@@ -28,6 +29,8 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
   private transmissionInterval: number = 60000
   private processDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private readonly DEBOUNCE_MS = 500 // Wait 500ms after last DOM change before processing
+  private currentConversationId: string | undefined = undefined  // Track current conversation ID
+  private lastCheckedUrl: string = ''  // Track URL to detect changes
 
   constructor() {
     super()
@@ -177,6 +180,83 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     return `${type}:${normalized.length}:${normalized}`
   }
 
+  /**
+   * Extract conversation/search ID from chatbot URLs
+   * - ChatGPT: chatgpt.com/c/{conversation-id} (UUID format)
+   * - Perplexity: perplexity.ai/search/{query-slug}-{search-id} (base64-like ID at end)
+   * - Claude: claude.ai/chat/{conversation-id} (UUID format)
+   * - Gemini: gemini.google.com/u/{n}/app/{conversation-id} (hex string)
+   */
+  private extractConversationId(): string | undefined {
+    const url = window.location.href
+    
+    // ChatGPT: Match conversation ID (UUID format)
+    // Format: chatgpt.com/c/{uuid}
+    if (url.includes('chatgpt.com')) {
+      const match = url.match(/chatgpt\.com\/c\/([a-f0-9-]+)/i)
+      return match ? match[1] : undefined
+    }
+    
+    // Perplexity: Match search ID at end of URL (base64url-like alphanumeric string)
+    // Format: perplexity.ai/search/{query-slug}-{searchId}
+    if (url.includes('perplexity.ai')) {
+      const match = url.match(/perplexity\.ai\/search\/.*-([a-zA-Z0-9_-]{15,30})(?:\?|$)/)
+      return match ? match[1] : undefined
+    }
+    
+    // Claude: Match conversation ID (UUID format)
+    // Format: claude.ai/chat/{uuid}
+    if (url.includes('claude.ai')) {
+      const match = url.match(/claude\.ai\/chat\/([a-f0-9-]+)/i)
+      return match ? match[1] : undefined
+    }
+    
+    // Gemini: Match conversation ID (hex string)
+    // Format: gemini.google.com/u/{n}/app/{hex-id}
+    if (url.includes('gemini.google.com')) {
+      const match = url.match(/gemini\.google\.com\/u\/\d+\/app\/([a-f0-9]+)/i)
+      return match ? match[1] : undefined
+    }
+    
+    return undefined
+  }
+
+  /**
+   * Check for URL changes and update conversation ID
+   * Also backfills pending interactions that don't have a conversation_id yet
+   */
+  private checkUrlChange(): void {
+    const currentUrl = window.location.href
+    
+    // Skip if URL hasn't changed
+    if (currentUrl === this.lastCheckedUrl) {
+      return
+    }
+    
+    this.lastCheckedUrl = currentUrl
+    const newConversationId = this.extractConversationId()
+    
+    // If conversation ID changed from undefined to a value, backfill pending interactions
+    if (newConversationId && newConversationId !== this.currentConversationId) {
+      console.log(`[LLM Chatbot Browser] Conversation ID detected: ${newConversationId}`)
+      
+      // Backfill any pending interactions that don't have a conversation_id
+      let backfilledCount = 0
+      for (const interaction of this.interactions) {
+        if (!interaction.conversation_id) {
+          interaction.conversation_id = newConversationId
+          backfilledCount++
+        }
+      }
+      
+      if (backfilledCount > 0) {
+        console.log(`[LLM Chatbot Browser] Backfilled conversation_id for ${backfilledCount} pending interactions`)
+      }
+    }
+    
+    this.currentConversationId = newConversationId
+  }
+
   private processPage(): void {
     if (!this.parser) {
       console.debug('[LLM Chatbot Browser] No parser available, skipping page processing')
@@ -184,6 +264,9 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     }
 
     try {
+      // Check for URL changes and update conversation ID (backfills pending interactions)
+      this.checkUrlChange()
+
       // Extract all current interactions from the page
       const newInteractions = this.parser.extractInteractions()
 
@@ -211,6 +294,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
           content: interaction.content,
           length: interaction.content.length,
           url: window.location.href,
+          conversation_id: this.currentConversationId,  // Attach current conversation ID if available
         }
 
         this.interactions.push(newInteraction)
