@@ -90,7 +90,15 @@ export class ChatGPTParser {
       // Skip anchors, javascript, and internal links
       if (url.startsWith('#') || url.startsWith('javascript:')) return true
       if (url.startsWith('/')) return true
-      if (url.includes('chatgpt.com') || url.includes('openai.com')) return true
+      // Skip internal ChatGPT/OpenAI links (check domain, not full URL string)
+      // URLs may contain utm_source=chatgpt.com which shouldn't be filtered
+      try {
+        const hostname = new URL(url).hostname
+        if (hostname.includes('chatgpt.com') || hostname.includes('openai.com')) return true
+      } catch {
+        // If URL parsing fails, skip it
+        return true
+      }
       // Skip already visited
       if (visitedUrls.has(url)) return true
       return false

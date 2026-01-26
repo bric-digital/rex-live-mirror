@@ -90,7 +90,14 @@ export class PerplexityParser {
       // Skip anchors, javascript, and internal links
       if (url.startsWith('#') || url.startsWith('javascript:')) return true
       if (url.startsWith('/')) return true
-      if (url.includes('perplexity.ai')) return true
+      // Skip internal Perplexity links (check domain, not full URL string)
+      try {
+        const hostname = new URL(url).hostname
+        if (hostname.includes('perplexity.ai')) return true
+      } catch {
+        // If URL parsing fails, skip it
+        return true
+      }
       // Skip already visited
       if (visitedUrls.has(url)) return true
       return false

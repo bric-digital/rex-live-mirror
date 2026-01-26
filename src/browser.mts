@@ -10,6 +10,8 @@ export interface ExtractedSource {
 }
 
 export interface LLMInteraction {
+  interaction_id: string  // Unique ID for this specific interaction
+  updates_interaction_id?: string  // If this extends a previous capture, reference to original
   source: string
   timestamp: number
   type: 'question' | 'response'
@@ -25,12 +27,21 @@ export interface LLMInteraction {
  * Runs in page context on chatbot websites
  * Responsible for: DOM observation, Q&A extraction, data capture
  */
+// Track captured content for update detection
+interface CapturedInteractionInfo {
+  interaction_id: string
+  length: number
+}
+
 class LLMChatbotBrowserModule extends WebmunkClientModule {
   private enabled: boolean = false
   private parser: any = null
   private mutationObserver: MutationObserver | null = null
   private interactions: LLMInteraction[] = []
-  private capturedContentHashes: Set<string> = new Set() // Track all captured content to prevent re-capture
+  // Track captured content by prefix for update detection
+  // Key: type + first N chars (normalized), Value: { interaction_id, length }
+  private capturedPrefixes: Map<string, CapturedInteractionInfo> = new Map()
+  private readonly PREFIX_LENGTH = 100  // Characters to use for prefix matching
   private batchSize: number = 10
   private transmissionInterval: number = 60000
   private processDebounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -179,13 +190,19 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
   }
 
   /**
-   * Generate a simple hash for content deduplication
+   * Generate a prefix key for content matching and update detection
+   * Uses type + normalized first N chars (ignoring length) to match content that may grow
    */
-  private hashContent(content: string, type: string): string {
-    // Use type + first 200 chars + length as a simple hash
-    // This handles cases where content might be truncated or have minor variations
-    const normalized = content.trim().substring(0, 200)
-    return `${type}:${normalized.length}:${normalized}`
+  private getPrefixKey(content: string, type: string): string {
+    const normalized = content.trim().substring(0, this.PREFIX_LENGTH).replace(/\s+/g, ' ')
+    return `${type}:${normalized}`
+  }
+
+  /**
+   * Generate a unique interaction ID
+   */
+  private generateInteractionId(): string {
+    return crypto.randomUUID()
   }
 
   /**
@@ -213,8 +230,8 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       const pathMatch = url.match(/perplexity\.ai\/search\/([^?#]+)/)
       if (pathMatch) {
         const searchPath = pathMatch[1]
-        // Extract the ID after the last hyphen (base64url format: letters, numbers, _ - no hyphens)
-        const idMatch = searchPath.match(/-([a-zA-Z0-9_]{15,30})$/)
+        // Extract the ID after the last hyphen (base64url format: letters, numbers, _, . - no hyphens)
+        const idMatch = searchPath.match(/-([a-zA-Z0-9_.]{15,30})$/)
         if (idMatch) {
           return idMatch[1]
         }
@@ -317,7 +334,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
         console.log('[LLM Chatbot Browser] Messages cleared from DOM - new conversation detected')
         // Reset for new conversation
         this.localSessionId = undefined
-        this.capturedContentHashes.clear()
+        this.capturedPrefixes.clear()
         this.currentConversationId = undefined
         this.lastCheckedUrl = ''  // Force URL re-check
       }
@@ -367,40 +384,70 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       }
 
       let newCaptureCount = 0
+      let updateCount = 0
       for (const interaction of newInteractions) {
-        // Generate hash for this content
-        const contentHash = this.hashContent(interaction.content, interaction.type)
+        // Generate prefix key for this content
+        const prefixKey = this.getPrefixKey(interaction.content, interaction.type)
+        const currentLength = interaction.content.length
+        const existingCapture = this.capturedPrefixes.get(prefixKey)
 
-        // Check if we've already captured this content (using persistent Set)
-        if (this.capturedContentHashes.has(contentHash)) {
-          continue // Skip - already captured
+        if (existingCapture) {
+          // Same prefix already captured
+          if (currentLength <= existingCapture.length) {
+            // Same or shorter content - skip (duplicate or subset)
+            continue
+          }
+
+          // Longer content - this is an update of the previous capture
+          const newId = this.generateInteractionId()
+          const newInteraction: LLMInteraction = {
+            interaction_id: newId,
+            updates_interaction_id: existingCapture.interaction_id,  // Reference original
+            source: this.parser.name,
+            timestamp: Date.now(),
+            type: interaction.type,
+            content: interaction.content,
+            length: currentLength,
+            url: window.location.href,
+            conversation_id: this.getEffectiveConversationId(),
+            sources: interaction.type === 'response' ? extractedSources : undefined,
+          }
+
+          // Update the map with new ID and length
+          this.capturedPrefixes.set(prefixKey, { interaction_id: newId, length: currentLength })
+          this.interactions.push(newInteraction)
+          updateCount++
+
+          console.log(
+            `[LLM Chatbot Browser] Updated ${interaction.type} (${existingCapture.length} -> ${currentLength} chars): ${interaction.content.substring(0, 50)}...`,
+          )
+        } else {
+          // New content - first capture
+          const newId = this.generateInteractionId()
+          const newInteraction: LLMInteraction = {
+            interaction_id: newId,
+            source: this.parser.name,
+            timestamp: Date.now(),
+            type: interaction.type,
+            content: interaction.content,
+            length: currentLength,
+            url: window.location.href,
+            conversation_id: this.getEffectiveConversationId(),
+            sources: interaction.type === 'response' ? extractedSources : undefined,
+          }
+
+          this.capturedPrefixes.set(prefixKey, { interaction_id: newId, length: currentLength })
+          this.interactions.push(newInteraction)
+          newCaptureCount++
+
+          console.log(
+            `[LLM Chatbot Browser] Captured ${interaction.type}: ${interaction.content.substring(0, 50)}...`,
+          )
         }
-
-        // Mark as captured
-        this.capturedContentHashes.add(contentHash)
-
-        const newInteraction: LLMInteraction = {
-          source: this.parser.name,
-          timestamp: Date.now(),
-          type: interaction.type,
-          content: interaction.content,
-          length: interaction.content.length,
-          url: window.location.href,
-          conversation_id: this.getEffectiveConversationId(),  // Use effective ID (server > local)
-          // Attach sources only to response-type interactions
-          sources: interaction.type === 'response' ? extractedSources : undefined,
-        }
-
-        this.interactions.push(newInteraction)
-        newCaptureCount++
-
-        console.log(
-          `[LLM Chatbot Browser] Captured ${interaction.type}: ${interaction.content.substring(0, 50)}...`,
-        )
       }
 
-      if (newCaptureCount > 0) {
-        console.log(`[LLM Chatbot Browser] Captured ${newCaptureCount} new interactions (${this.capturedContentHashes.size} total unique)`)
+      if (newCaptureCount > 0 || updateCount > 0) {
+        console.log(`[LLM Chatbot Browser] Captured ${newCaptureCount} new, ${updateCount} updates (${this.capturedPrefixes.size} total unique)`)
       }
       console.debug(`[LLM Chatbot Browser] Pending for transmission: ${this.interactions.length}`)
     } catch (error) {
