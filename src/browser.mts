@@ -207,8 +207,8 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       const pathMatch = url.match(/perplexity\.ai\/search\/([^?#]+)/)
       if (pathMatch) {
         const searchPath = pathMatch[1]
-        // Extract the ID after the last hyphen (base64url format: letters, numbers, _, -)
-        const idMatch = searchPath.match(/-([a-zA-Z0-9_-]{15,30})$/)
+        // Extract the ID after the last hyphen (base64url format: letters, numbers, _ - no hyphens)
+        const idMatch = searchPath.match(/-([a-zA-Z0-9_]{15,30})$/)
         if (idMatch) {
           return idMatch[1]
         }
