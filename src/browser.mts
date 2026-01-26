@@ -199,11 +199,21 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       return match ? match[1] : undefined
     }
     
-    // Perplexity: Match search ID at end of URL (base64url-like alphanumeric string)
+    // Perplexity: Match search ID at end of URL path (base64url-like alphanumeric string)
     // Format: perplexity.ai/search/{query-slug}-{searchId}
+    // The searchId is always the last segment after the final hyphen
     if (url.includes('perplexity.ai')) {
-      const match = url.match(/perplexity\.ai\/search\/.*-([a-zA-Z0-9_-]{15,30})(?:\?|$)/)
-      return match ? match[1] : undefined
+      // First extract just the path portion (before any ? or #)
+      const pathMatch = url.match(/perplexity\.ai\/search\/([^?#]+)/)
+      if (pathMatch) {
+        const searchPath = pathMatch[1]
+        // Extract the ID after the last hyphen (base64url format: letters, numbers, _, -)
+        const idMatch = searchPath.match(/-([a-zA-Z0-9_-]{15,30})$/)
+        if (idMatch) {
+          return idMatch[1]
+        }
+      }
+      return undefined
     }
     
     // Claude: Match conversation ID (UUID format)
@@ -387,40 +397,25 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       // Get batch to transmit
       const batch = this.interactions.splice(0, this.batchSize)
 
-      console.log(`[LLM Chatbot Browser] Transmitting batch of ${batch.length} interactions`)
+      console.log(`[LLM Chatbot Browser] Transmitting batch of ${batch.length} interactions via message`)
 
-      // Store in chrome storage for service worker to pick up
-      chrome.storage.local.get('llm_interactions', (result) => {
-        try {
-          const allInteractions = result.llm_interactions || []
-          const updated = [...allInteractions, ...batch]
-
-          chrome.storage.local.set({
-            llm_interactions: updated,
-          }, () => {
-            console.log(`[LLM Chatbot Browser] Batch stored in chrome.storage.local. Total: ${updated.length}`)
-          })
-
-          // Notify service worker
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ;(chrome.runtime.sendMessage as any)(
-            {
-              messageType: 'llmInteractionsBatch',
-              interactions: batch,
-            },
-            () => {
-              const lastError = (chrome.runtime as any).lastError
-              if (lastError) {
-                console.error('[LLM Chatbot Browser] Error notifying service worker:', lastError)
-              } else {
-                console.log('[LLM Chatbot Browser] Service worker notified of batch')
-              }
-            }
-          )
-        } catch (error) {
-          console.error('[LLM Chatbot Browser] Error during batch transmission:', error)
+      // Send directly to service worker via message (single transmission path)
+      // Note: Removed storage-based transmission to prevent duplicate processing
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(chrome.runtime.sendMessage as any)(
+        {
+          messageType: 'llmInteractionsBatch',
+          interactions: batch,
+        },
+        () => {
+          const lastError = (chrome.runtime as any).lastError
+          if (lastError) {
+            console.error('[LLM Chatbot Browser] Error sending to service worker:', lastError)
+          } else {
+            console.log('[LLM Chatbot Browser] Batch sent to service worker successfully')
+          }
         }
-      })
+      )
     } catch (error) {
       console.error('[LLM Chatbot Browser] Error transmitting batch:', error)
     }

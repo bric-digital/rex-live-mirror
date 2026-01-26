@@ -6,9 +6,9 @@ import { WebmunkServiceWorkerModule, registerWebmunkModule, dispatchEvent } from
  */
 class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
   private enabled: boolean = false
-  private pendingInteractions: any[] = []
   private config: any = null
   private chatGPTCaptureManager: ChatGPTCaptureManager | null = null
+  private transmittedHashes: Set<string> = new Set() // Track transmitted interactions to prevent duplicates
 
   constructor() {
     super()
@@ -43,15 +43,8 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
         }
       }
     })
-
-    // Listen for storage changes
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && 'llm_interactions' in changes) {
-        const interactions = changes['llm_interactions'].newValue || []
-        console.log(`[LLM Chatbot] Storage change detected: ${interactions.length} interactions`)
-        this.processInteractionsForTransmission(interactions)
-      }
-    })
+    // Note: Removed storage change listener - using message-based transmission only
+    // to prevent duplicate processing (storage + message would cause 2x dispatches)
   }
 
   handleMessage(message:any, sender:any, sendResponse:(response:any) => void):boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -92,36 +85,51 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
     return false
   }
 
+  /**
+   * Generate a hash for interaction deduplication
+   */
+  private hashInteraction(interaction: any): string {
+    // Use type + timestamp + first 200 chars of content as a unique identifier
+    const contentPrefix = (interaction.content || '').substring(0, 200)
+    return `${interaction.type}:${interaction.timestamp}:${contentPrefix}`
+  }
+
   private handleInteractionBatch(interactions: any[]): void {
     console.log(`[LLM Chatbot] Service Worker received batch of ${interactions.length} interactions`)
 
-    for (const interaction of interactions) {
-      // Add to pending for transmission
-      this.pendingInteractions.push({
-        source: interaction.source,
-        timestamp: interaction.timestamp,
-        type: interaction.type,
-        content: interaction.content,
-        length: interaction.length,
-        url: interaction.url,
-        conversation_id: interaction.conversation_id,  // ChatGPT conversation ID
-      })
+    // Filter out already-transmitted interactions
+    const newInteractions = interactions.filter(interaction => {
+      const hash = this.hashInteraction(interaction)
+      if (this.transmittedHashes.has(hash)) {
+        console.log(`[LLM Chatbot] Skipping duplicate interaction: ${interaction.type}`)
+        return false
+      }
+      return true
+    })
+
+    if (newInteractions.length === 0) {
+      console.log('[LLM Chatbot] All interactions were duplicates, nothing to transmit')
+      return
     }
 
+    console.log(`[LLM Chatbot] Processing ${newInteractions.length} new interactions (${interactions.length - newInteractions.length} duplicates filtered)`)
+    
     // Process for transmission
-    this.processInteractionsForTransmission(this.pendingInteractions)
+    this.processInteractionsForTransmission(newInteractions)
   }
 
   private processInteractionsForTransmission(interactions: any[]): void {
     if (interactions.length === 0) return
 
-    console.log(`[LLM Chatbot] Processing ${interactions.length} interactions for PDK transmission`)
+    console.log(`[LLM Chatbot] Transmitting ${interactions.length} interactions to PDK`)
 
-    // Format for PDK
+    // Format for PDK and mark as transmitted
     for (const interaction of interactions) {
-      // Send to PDK for encryption and transmission
-      console.log('[LLM Chatbot] Queuing data point for PDK transmission')
+      // Mark as transmitted to prevent future duplicates
+      const hash = this.hashInteraction(interaction)
+      this.transmittedHashes.add(hash)
 
+      // Send to PDK for encryption and transmission
       dispatchEvent({
         name: 'llm-chatbot-interaction',
         date: new Date(interaction.timestamp),
@@ -130,18 +138,18 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
           content: interaction.content,
           length: interaction.length,
           url: interaction.url,
-          conversation_id: interaction.conversation_id,  // ChatGPT conversation ID
+          conversation_id: interaction.conversation_id,
         },
         data_source: 'extension_chatgpt_capture'
       })
+
+      console.log(`[LLM Chatbot] Dispatched ${interaction.type} to PDK`)
     }
 
-    // Clear transmitted interactions
-    chrome.storage.local.set({
-      llm_interactions: [],
-    })
-
-    this.pendingInteractions = []
+    // Clear storage (browser module may have stored these)
+    chrome.storage.local.set({ llm_interactions: [] })
+    
+    console.log(`[LLM Chatbot] Transmission complete. Total unique interactions tracked: ${this.transmittedHashes.size}`)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
