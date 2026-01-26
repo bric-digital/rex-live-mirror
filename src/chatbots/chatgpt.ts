@@ -110,10 +110,11 @@ export class ChatGPTParser {
       return !skipPatterns.some((pattern) => pattern.test(title))
     }
 
-    // Method 1: Extract from DOM links (clickable citations)
+    // Method 1: Extract from DOM links using ek_dev selectors
+    // ChatGPT uses links, nav-list links, and footnote buttons for citations
     const linkSelector =
       this.selectors.citationElements ||
-      '[data-message-author-role="assistant"] a[href^="http"]'
+      '[data-message-author-role="assistant"] a[href], .group\\/nav-list a[href], button.group\\/footnote a[href]'
 
     const linkElements = document.querySelectorAll(linkSelector)
 
@@ -129,7 +130,16 @@ export class ChatGPTParser {
         title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
       }
 
-      if (url && title && isValidTitle(title)) {
+      // If title is just a URL or not valid, extract domain as title
+      if (!title || !isValidTitle(title) || title.startsWith('http')) {
+        try {
+          title = new URL(url).hostname.replace(/^www\./, '')
+        } catch {
+          title = url
+        }
+      }
+
+      if (url && title) {
         visitedUrls.add(url)
         sources.push({ source_title: title, source_url: url })
       }

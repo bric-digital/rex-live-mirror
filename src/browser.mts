@@ -415,10 +415,35 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
         return
       }
 
-      // Get batch to transmit
-      const batch = this.interactions.splice(0, this.batchSize)
+      // Only transmit interactions that have a conversation_id
+      // Keep ones without an ID for later backfilling when we get a response
+      const readyToTransmit: LLMInteraction[] = []
+      const needsBackfill: LLMInteraction[] = []
 
-      console.log(`[LLM Chatbot Browser] Transmitting batch of ${batch.length} interactions via message`)
+      for (const interaction of this.interactions) {
+        if (interaction.conversation_id) {
+          readyToTransmit.push(interaction)
+        } else {
+          needsBackfill.push(interaction)
+        }
+      }
+
+      // Keep interactions that need backfilling, clear the ones we're transmitting
+      this.interactions = needsBackfill
+
+      if (readyToTransmit.length === 0) {
+        console.debug(`[LLM Chatbot Browser] ${needsBackfill.length} interactions waiting for conversation_id`)
+        return
+      }
+
+      // Get batch to transmit (respect batch size)
+      const batch = readyToTransmit.slice(0, this.batchSize)
+      // Put any overflow back into the queue (at the front, since they're ready)
+      if (readyToTransmit.length > this.batchSize) {
+        this.interactions = [...readyToTransmit.slice(this.batchSize), ...this.interactions]
+      }
+
+      console.log(`[LLM Chatbot Browser] Transmitting batch of ${batch.length} interactions via message (${needsBackfill.length} waiting for ID)`)
 
       // Send directly to service worker via message (single transmission path)
       // Note: Removed storage-based transmission to prevent duplicate processing

@@ -111,8 +111,9 @@ export class PerplexityParser {
     }
 
     // Get configured citation selector - Perplexity uses data attributes and links
+    // Using ek_dev selector pattern: a[href*="http"] matches any link containing http
     const citationSelector =
-      this.selectors.citationElements || '[data-pplx-citation-url], a[href^="http"]'
+      this.selectors.citationElements || 'a[href*="http"], [data-pplx-citation-url]'
 
     // Find all citation elements on the page
     const citationElements = document.querySelectorAll(citationSelector)
