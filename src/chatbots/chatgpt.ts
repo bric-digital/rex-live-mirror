@@ -13,6 +13,12 @@ export interface ChatGPTSelectors {
   assistantMessage?: string
   messageContainer?: string
   contentDiv?: string
+  citationElements?: string
+}
+
+export interface ExtractedSource {
+  source_title: string
+  source_url?: string
 }
 
 export interface ChatGPTConfig {
@@ -67,5 +73,64 @@ export class ChatGPTParser {
     }
 
     return interactions
+  }
+
+  /**
+   * Extract sources cited in the response
+   * Uses configured selectors to find all citation/link elements on page
+   */
+  extractSources(): ExtractedSource[] {
+    const sources: ExtractedSource[] = []
+
+    // Get configured citation selector - ChatGPT uses links and footnotes
+    const linkSelector =
+      this.selectors.citationElements ||
+      'a[href],.group\\/nav-list a[href],button.group\\/footnote a[href]'
+
+    // Find all citation elements on the page
+    const linkElements = document.querySelectorAll(linkSelector)
+
+    if (linkElements.length === 0) {
+      return sources
+    }
+
+    const visitedUrls = new Set<string>()
+
+    linkElements.forEach((element) => {
+      // Get URL from href attribute
+      const url = element.getAttribute('href')
+
+      if (!url || url.startsWith('javascript:') || visitedUrls.has(url)) {
+        return
+      }
+
+      // Skip internal ChatGPT links
+      if (url.startsWith('/') || url.includes('chatgpt.com') || url.includes('openai.com')) {
+        return
+      }
+
+      // Extract title from element text
+      let title = element.textContent?.trim()
+
+      // Clean up title - remove extra whitespace and limit length
+      if (title) {
+        title = title.replace(/\s+/g, ' ').substring(0, 200)
+      }
+
+      if (!title) {
+        title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
+      }
+
+      if (url && title && !visitedUrls.has(url)) {
+        visitedUrls.add(url)
+        sources.push({
+          source_title: title,
+          source_url: url,
+        })
+      }
+    })
+
+    console.log(`[ChatGPTParser] Extracted ${sources.length} sources`)
+    return sources
   }
 }

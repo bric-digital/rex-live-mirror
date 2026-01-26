@@ -139,6 +139,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
           length: interaction.length,
           url: interaction.url,
           conversation_id: interaction.conversation_id,
+          sources: interaction.sources,  // Include extracted citation sources
         },
         data_source: 'extension_chatgpt_capture'
       })

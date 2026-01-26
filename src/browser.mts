@@ -4,6 +4,11 @@ import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
 import { ClaudeParser } from './chatbots/claude.js'
 
+export interface ExtractedSource {
+  source_title: string
+  source_url?: string
+}
+
 export interface LLMInteraction {
   source: string
   timestamp: number
@@ -12,6 +17,7 @@ export interface LLMInteraction {
   length: number
   url: string
   conversation_id?: string  // ChatGPT conversation ID (extracted from URL when available)
+  sources?: ExtractedSource[]  // Citation sources extracted from response
 }
 
 /**
@@ -347,6 +353,19 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
         }
       }
 
+      // Extract sources once per page processing (for responses)
+      let extractedSources: ExtractedSource[] = []
+      if (hasResponse && typeof this.parser.extractSources === 'function') {
+        try {
+          extractedSources = this.parser.extractSources()
+          if (extractedSources.length > 0) {
+            console.log(`[LLM Chatbot Browser] Extracted ${extractedSources.length} sources from page`)
+          }
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error extracting sources:', error)
+        }
+      }
+
       let newCaptureCount = 0
       for (const interaction of newInteractions) {
         // Generate hash for this content
@@ -368,6 +387,8 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
           length: interaction.content.length,
           url: window.location.href,
           conversation_id: this.getEffectiveConversationId(),  // Use effective ID (server > local)
+          // Attach sources only to response-type interactions
+          sources: interaction.type === 'response' ? extractedSources : undefined,
         }
 
         this.interactions.push(newInteraction)
