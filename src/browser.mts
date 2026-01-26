@@ -29,8 +29,10 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
   private transmissionInterval: number = 60000
   private processDebounceTimer: ReturnType<typeof setTimeout> | null = null
   private readonly DEBOUNCE_MS = 500 // Wait 500ms after last DOM change before processing
-  private currentConversationId: string | undefined = undefined  // Track current conversation ID
+  private currentConversationId: string | undefined = undefined  // Server-provided conversation ID from URL
   private lastCheckedUrl: string = ''  // Track URL to detect changes
+  private localSessionId: string | undefined = undefined  // Self-generated ID for logged-out sessions
+  private hadMessagesInDOM: boolean = false  // Track if we previously had messages (for new conversation detection)
 
   constructor() {
     super()
@@ -222,7 +224,23 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
   }
 
   /**
+   * Generate a local session ID for logged-out conversations
+   * Prefixed with 'local-' to distinguish from server-provided IDs
+   */
+  private generateLocalSessionId(): string {
+    return 'local-' + crypto.randomUUID()
+  }
+
+  /**
+   * Get the effective conversation ID (server ID always supersedes local ID)
+   */
+  private getEffectiveConversationId(): string | undefined {
+    return this.currentConversationId || this.localSessionId
+  }
+
+  /**
    * Check for URL changes and update conversation ID
+   * Server-provided ID always supersedes local session ID
    * Also backfills pending interactions that don't have a conversation_id yet
    */
   private checkUrlChange(): void {
@@ -234,17 +252,24 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     }
     
     this.lastCheckedUrl = currentUrl
-    const newConversationId = this.extractConversationId()
+    const newServerConversationId = this.extractConversationId()
     
-    // If conversation ID changed from undefined to a value, backfill pending interactions
-    if (newConversationId && newConversationId !== this.currentConversationId) {
-      console.log(`[LLM Chatbot Browser] Conversation ID detected: ${newConversationId}`)
+    // If server conversation ID appeared, it supersedes any local session ID
+    if (newServerConversationId && newServerConversationId !== this.currentConversationId) {
+      console.log(`[LLM Chatbot Browser] Server conversation ID detected: ${newServerConversationId}`)
       
-      // Backfill any pending interactions that don't have a conversation_id
+      // Clear local session ID since server ID takes precedence
+      if (this.localSessionId) {
+        console.log(`[LLM Chatbot Browser] Clearing local session ID (server ID supersedes)`)
+        this.localSessionId = undefined
+      }
+      
+      // Backfill any pending interactions with the server ID
+      // This updates interactions that had local ID or no ID
       let backfilledCount = 0
       for (const interaction of this.interactions) {
-        if (!interaction.conversation_id) {
-          interaction.conversation_id = newConversationId
+        if (!interaction.conversation_id || interaction.conversation_id.startsWith('local-')) {
+          interaction.conversation_id = newServerConversationId
           backfilledCount++
         }
       }
@@ -254,7 +279,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
       }
     }
     
-    this.currentConversationId = newConversationId
+    this.currentConversationId = newServerConversationId
   }
 
   private processPage(): void {
@@ -269,9 +294,47 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
 
       // Extract all current interactions from the page
       const newInteractions = this.parser.extractInteractions()
+      const hasMessagesNow = newInteractions.length > 0
+
+      // Detect new conversation: messages were cleared from DOM
+      if (this.hadMessagesInDOM && !hasMessagesNow) {
+        console.log('[LLM Chatbot Browser] Messages cleared from DOM - new conversation detected')
+        // Reset for new conversation
+        this.localSessionId = undefined
+        this.capturedContentHashes.clear()
+        this.currentConversationId = undefined
+        this.lastCheckedUrl = ''  // Force URL re-check
+      }
+      
+      // Update tracking state
+      this.hadMessagesInDOM = hasMessagesNow
 
       if (newInteractions.length > 0) {
         console.log(`[LLM Chatbot Browser] Extracted ${newInteractions.length} interactions from page`)
+      }
+
+      // Check if we have any responses (not just questions)
+      const hasResponse = newInteractions.some((i: { type: string }) => i.type === 'response')
+
+      // Generate local session ID only if:
+      // 1. No server conversation ID available
+      // 2. We have a response (not just a prompt)
+      // 3. We don't already have a local session ID
+      if (!this.currentConversationId && hasResponse && !this.localSessionId) {
+        this.localSessionId = this.generateLocalSessionId()
+        console.log(`[LLM Chatbot Browser] Generated local session ID: ${this.localSessionId}`)
+        
+        // Backfill any pending interactions that don't have a conversation_id
+        let backfilledCount = 0
+        for (const interaction of this.interactions) {
+          if (!interaction.conversation_id) {
+            interaction.conversation_id = this.localSessionId
+            backfilledCount++
+          }
+        }
+        if (backfilledCount > 0) {
+          console.log(`[LLM Chatbot Browser] Backfilled local session ID for ${backfilledCount} pending interactions`)
+        }
       }
 
       let newCaptureCount = 0
@@ -294,7 +357,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
           content: interaction.content,
           length: interaction.content.length,
           url: window.location.href,
-          conversation_id: this.currentConversationId,  // Attach current conversation ID if available
+          conversation_id: this.getEffectiveConversationId(),  // Use effective ID (server > local)
         }
 
         this.interactions.push(newInteraction)
