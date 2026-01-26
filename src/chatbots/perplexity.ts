@@ -82,32 +82,46 @@ export class PerplexityParser {
    */
   extractSources(): ExtractedSource[] {
     const sources: ExtractedSource[] = []
+    const visitedUrls = new Set<string>()
+
+    // Helper to check if URL should be skipped
+    const shouldSkipUrl = (url: string): boolean => {
+      if (!url) return true
+      // Skip anchors, javascript, and internal links
+      if (url.startsWith('#') || url.startsWith('javascript:')) return true
+      if (url.startsWith('/')) return true
+      if (url.includes('perplexity.ai')) return true
+      // Skip already visited
+      if (visitedUrls.has(url)) return true
+      return false
+    }
+
+    // Helper to check if title is valid (not navigation/accessibility text)
+    const isValidTitle = (title: string): boolean => {
+      if (!title || title.length < 3) return false
+      const skipPatterns = [
+        /^skip\s+to/i,
+        /^jump\s+to/i,
+        /^go\s+to/i,
+        /^main\s+content/i,
+        /^navigation/i,
+        /^\d+$/,  // Just numbers
+      ]
+      return !skipPatterns.some((pattern) => pattern.test(title))
+    }
 
     // Get configured citation selector - Perplexity uses data attributes and links
     const citationSelector =
-      this.selectors.citationElements || 'a[href*="http"], [data-pplx-citation-url]'
+      this.selectors.citationElements || '[data-pplx-citation-url], a[href^="http"]'
 
     // Find all citation elements on the page
     const citationElements = document.querySelectorAll(citationSelector)
-
-    if (citationElements.length === 0) {
-      return sources
-    }
-
-    const visitedUrls = new Set<string>()
 
     citationElements.forEach((element) => {
       // Get URL from data attribute or href
       const url = element.getAttribute('data-pplx-citation-url') || element.getAttribute('href')
 
-      if (!url || url.startsWith('javascript:') || visitedUrls.has(url)) {
-        return
-      }
-
-      // Skip internal Perplexity links
-      if (url.startsWith('/') || url.includes('perplexity.ai')) {
-        return
-      }
+      if (!url || shouldSkipUrl(url)) return
 
       // Extract title from element text
       let title = element.textContent?.trim()
@@ -121,7 +135,16 @@ export class PerplexityParser {
         title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
       }
 
-      if (url && title && !visitedUrls.has(url)) {
+      // If title is just a URL or not valid, extract domain as title
+      if (!title || !isValidTitle(title) || title.startsWith('http')) {
+        try {
+          title = new URL(url).hostname.replace(/^www\./, '')
+        } catch {
+          title = url
+        }
+      }
+
+      if (url && title) {
         visitedUrls.add(url)
         sources.push({
           source_title: title,

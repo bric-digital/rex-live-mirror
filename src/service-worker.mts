@@ -87,11 +87,14 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
 
   /**
    * Generate a hash for interaction deduplication
+   * Note: Does NOT include timestamp - same content within same conversation is a duplicate
    */
   private hashInteraction(interaction: any): string {
-    // Use type + timestamp + first 200 chars of content as a unique identifier
+    // Use type + conversation_id + first 200 chars of content as a unique identifier
+    // Timestamp is deliberately excluded so near-simultaneous duplicates are caught
     const contentPrefix = (interaction.content || '').substring(0, 200)
-    return `${interaction.type}:${interaction.timestamp}:${contentPrefix}`
+    const conversationId = interaction.conversation_id || 'no-convo'
+    return `${interaction.type}:${conversationId}:${contentPrefix}`
   }
 
   private handleInteractionBatch(interactions: any[]): void {

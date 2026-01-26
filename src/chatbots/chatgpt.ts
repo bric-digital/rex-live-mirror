@@ -77,55 +77,91 @@ export class ChatGPTParser {
 
   /**
    * Extract sources cited in the response
-   * Uses configured selectors to find all citation/link elements on page
+   * Combines DOM-based link extraction with text-based URL extraction
+   * ChatGPT often displays URLs as inline text before they become clickable
    */
   extractSources(): ExtractedSource[] {
     const sources: ExtractedSource[] = []
-
-    // Get configured citation selector - ChatGPT uses links and footnotes
-    const linkSelector =
-      this.selectors.citationElements ||
-      'a[href],.group\\/nav-list a[href],button.group\\/footnote a[href]'
-
-    // Find all citation elements on the page
-    const linkElements = document.querySelectorAll(linkSelector)
-
-    if (linkElements.length === 0) {
-      return sources
-    }
-
     const visitedUrls = new Set<string>()
 
+    // Helper to check if URL should be skipped
+    const shouldSkipUrl = (url: string): boolean => {
+      if (!url) return true
+      // Skip anchors, javascript, and internal links
+      if (url.startsWith('#') || url.startsWith('javascript:')) return true
+      if (url.startsWith('/')) return true
+      if (url.includes('chatgpt.com') || url.includes('openai.com')) return true
+      // Skip already visited
+      if (visitedUrls.has(url)) return true
+      return false
+    }
+
+    // Helper to check if title is valid (not navigation/accessibility text)
+    const isValidTitle = (title: string): boolean => {
+      if (!title || title.length < 3) return false
+      const skipPatterns = [
+        /^skip\s+to/i,
+        /^jump\s+to/i,
+        /^go\s+to/i,
+        /^main\s+content/i,
+        /^navigation/i,
+        /^\d+$/,  // Just numbers
+      ]
+      return !skipPatterns.some((pattern) => pattern.test(title))
+    }
+
+    // Method 1: Extract from DOM links (clickable citations)
+    const linkSelector =
+      this.selectors.citationElements ||
+      '[data-message-author-role="assistant"] a[href^="http"]'
+
+    const linkElements = document.querySelectorAll(linkSelector)
+
     linkElements.forEach((element) => {
-      // Get URL from href attribute
       const url = element.getAttribute('href')
+      if (!url || shouldSkipUrl(url)) return
 
-      if (!url || url.startsWith('javascript:') || visitedUrls.has(url)) {
-        return
-      }
-
-      // Skip internal ChatGPT links
-      if (url.startsWith('/') || url.includes('chatgpt.com') || url.includes('openai.com')) {
-        return
-      }
-
-      // Extract title from element text
       let title = element.textContent?.trim()
-
-      // Clean up title - remove extra whitespace and limit length
       if (title) {
         title = title.replace(/\s+/g, ' ').substring(0, 200)
       }
-
       if (!title) {
         title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
       }
 
-      if (url && title && !visitedUrls.has(url)) {
+      if (url && title && isValidTitle(title)) {
         visitedUrls.add(url)
-        sources.push({
-          source_title: title,
-          source_url: url,
+        sources.push({ source_title: title, source_url: url })
+      }
+    })
+
+    // Method 2: Extract URLs from response text content (inline URLs)
+    // ChatGPT often shows URLs as plain text before they're linkified
+    const assistantMessages = document.querySelectorAll(
+      this.selectors.assistantMessage || '[data-message-author-role="assistant"]',
+    )
+
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g
+
+    assistantMessages.forEach((msg) => {
+      const textContent = msg.textContent || ''
+      const matches = textContent.match(urlRegex)
+
+      if (matches) {
+        matches.forEach((url) => {
+          // Clean up URL (remove trailing punctuation)
+          const cleanUrl = url.replace(/[.,;:!?)]+$/, '')
+
+          if (shouldSkipUrl(cleanUrl)) return
+
+          visitedUrls.add(cleanUrl)
+          // Use domain as title for text-extracted URLs
+          try {
+            const domain = new URL(cleanUrl).hostname.replace(/^www\./, '')
+            sources.push({ source_title: domain, source_url: cleanUrl })
+          } catch {
+            sources.push({ source_title: cleanUrl, source_url: cleanUrl })
+          }
         })
       }
     })
