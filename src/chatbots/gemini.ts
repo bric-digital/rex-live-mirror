@@ -20,7 +20,7 @@ export interface GeminiConfig {
 
 export class GeminiParser {
   name = 'gemini'
-  private selectors: GeminiSelectors
+  selectors: GeminiSelectors
 
   constructor(config?: GeminiConfig) {
     // Use config selectors or defaults

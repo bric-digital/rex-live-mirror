@@ -26,9 +26,15 @@ export interface PerplexityConfig {
   selectors?: PerplexitySelectors
 }
 
+export interface SelectorValidation {
+  valid: boolean
+  questionsFound: number
+  responsesFound: number
+}
+
 export class PerplexityParser {
   name = 'perplexity'
-  private selectors: PerplexitySelectors
+  selectors: PerplexitySelectors
 
   constructor(config?: PerplexityConfig) {
     // Use config selectors or defaults
@@ -37,6 +43,27 @@ export class PerplexityParser {
       assistantResponse: 'div[id^="markdown-content"]',
     }
     console.log('[PerplexityParser] Initialized with selectors:', this.selectors)
+  }
+
+  /**
+   * Validate that current selectors can find elements on the page
+   * Useful for detecting if DOM structure has changed and selectors need updating
+   */
+  validateSelectors(): SelectorValidation {
+    const questionSelector = this.selectors.userQuestion || ''
+    const responseSelector = this.selectors.assistantResponse || ''
+
+    const questionElements = questionSelector ? document.querySelectorAll(questionSelector) : []
+    const responseElements = responseSelector ? document.querySelectorAll(responseSelector) : []
+
+    const validation: SelectorValidation = {
+      valid: questionElements.length > 0 && responseElements.length > 0,
+      questionsFound: questionElements.length,
+      responsesFound: responseElements.length,
+    }
+
+    console.log('[PerplexityParser] Selector validation:', validation)
+    return validation
   }
 
   extractInteractions(): ParsedInteraction[] {

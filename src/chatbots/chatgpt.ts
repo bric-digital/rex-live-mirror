@@ -28,7 +28,7 @@ export interface ChatGPTConfig {
 
 export class ChatGPTParser {
   name = 'chatgpt'
-  private selectors: ChatGPTSelectors
+  selectors: ChatGPTSelectors
 
   constructor(config?: ChatGPTConfig) {
     // Use config selectors or defaults
@@ -67,6 +67,25 @@ export class ChatGPTParser {
           interactions.push({
             type: 'response',
             content,
+          })
+        }
+      })
+    }
+
+    // Fallback: Look for message groups if no messages found with primary selectors
+    // ChatGPT sometimes uses conversation-turn containers instead of role-based selectors
+    if (interactions.length === 0) {
+      console.log('[ChatGPTParser] No messages found with primary selectors, trying fallback [data-testid="conversation-turn"]')
+      const messageGroups = document.querySelectorAll('[data-testid="conversation-turn"]')
+      console.log(`[ChatGPTParser] Found ${messageGroups.length} conversation-turn elements`)
+      messageGroups.forEach((group) => {
+        const textContent = group.textContent?.trim()
+        if (textContent && textContent.length > 0) {
+          // Alternate between question and response based on order
+          // ChatGPT alternates user/assistant in conversation turns
+          interactions.push({
+            type: interactions.length % 2 === 0 ? 'question' : 'response',
+            content: textContent,
           })
         }
       })

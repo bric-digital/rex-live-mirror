@@ -136,6 +136,14 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
 
       if (this.parser) {
         console.log(`[LLM Chatbot Browser] Parser initialized: ${this.parser.name}`)
+        console.log(`[LLM Chatbot Browser] Parser selectors:`, this.parser.selectors || 'default')
+        
+        // Run selector validation for Perplexity parser if available
+        if (typeof this.parser.validateSelectors === 'function') {
+          const validation = this.parser.validateSelectors()
+          console.log(`[LLM Chatbot Browser] Selector validation: valid=${validation.valid}, questions=${validation.questionsFound}, responses=${validation.responsesFound}`)
+        }
+        
         this.startCapture()
       }
     } catch (error) {

@@ -20,7 +20,7 @@ export interface ClaudeConfig {
 
 export class ClaudeParser {
   name = 'claude'
-  private selectors: ClaudeSelectors
+  selectors: ClaudeSelectors
 
   constructor(config?: ClaudeConfig) {
     // Use config selectors or defaults

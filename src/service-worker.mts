@@ -133,9 +133,11 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
       this.transmittedHashes.add(hash)
 
       // Send to PDK for encryption and transmission
+      // chatbot_name becomes secondary_identifier in PDK (requires backend generator module)
       dispatchEvent({
         name: 'llm-chatbot-interaction',
         date: new Date(interaction.timestamp),
+        chatbot_name: interaction.source,  // Secondary identifier: chatgpt, perplexity, claude, gemini
         interaction: {
           type: interaction.type,
           content: interaction.content,
@@ -147,7 +149,7 @@ class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
         data_source: 'extension_chatgpt_capture'
       })
 
-      console.log(`[LLM Chatbot] Dispatched ${interaction.type} to PDK`)
+      console.log(`[LLM Chatbot] Dispatched ${interaction.type} from ${interaction.source} to PDK (conversation: ${interaction.conversation_id})`)
     }
 
     // Clear storage (browser module may have stored these)
@@ -357,6 +359,7 @@ class ChatGPTCaptureManager {
 
     dispatchEvent({
       name: 'webmunk-live-mirror',
+      chatbot_name: data.platform,  // Secondary identifier: chatgpt, perplexity, etc.
       ...data,
       data_source: 'extension_chatgpt_capture'
     })
