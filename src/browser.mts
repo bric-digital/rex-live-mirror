@@ -1,4 +1,4 @@
-import { WebmunkClientModule, registerWebmunkModule } from '@bric/webmunk-core/browser'
+import { REXClientModule, registerREXModule } from '@bric/rex-core/browser'
 import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
@@ -10,7 +10,7 @@ export interface LLMInteraction {
   type: 'question' | 'response'
   content: string
   length: number
-  url: string 
+  url: string
 }
 
 /**
@@ -18,7 +18,7 @@ export interface LLMInteraction {
  * Runs in page context on chatbot websites
  * Responsible for: DOM observation, Q&A extraction, data capture
  */
-class LLMChatbotBrowserModule extends WebmunkClientModule {
+class LLMChatbotBrowserModule extends REXClientModule {
   private enabled: boolean = false
   private parser: any = null
   private mutationObserver: MutationObserver | null = null
@@ -74,7 +74,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     const currentURL = window.location.href
     // Read sources from backend config, default to all if not specified
     const enabledSources = llmConfig.sources || []
-    
+
     console.log('[LLM Chatbot Browser] Checking URL for chatbot:', currentURL)
     console.log('[LLM Chatbot Browser] Enabled sources from backend config:', enabledSources)
 
@@ -253,7 +253,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
 }
 
 const llmChatbotModule = new LLMChatbotBrowserModule()
-registerWebmunkModule(llmChatbotModule)
+registerREXModule(llmChatbotModule)
 
 console.log('[LLM Chatbot Browser] Module registered and ready')
 

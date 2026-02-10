@@ -1,11 +1,11 @@
-import { WebmunkExtensionModule, registerWebmunkModule } from '@bric/webmunk-core/extension'
+import { REXExtensionModule, registerREXModule } from '@bric/rex-core/extension'
 
 /**
  * LLM Chatbot Module - Extension Context
  * Runs in the extension's HTML page context
  * Responsible for: UI setup, status management, user-facing features
  */
-class LLMChatbotExtensionModule extends WebmunkExtensionModule {
+class LLMChatbotExtensionModule extends REXExtensionModule {
   private enabled: boolean = false
   private activeChats: Map<string, boolean> = new Map()
   private stats = {
@@ -41,7 +41,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
             console.log('[LLM Chatbot Extension] Enabled sources:', llmConfig.sources)
             console.log('[LLM Chatbot Extension] Transmission interval:', llmConfig.transmission_interval_ms, 'ms')
             console.log('[LLM Chatbot Extension] Batch size:', llmConfig.batch_size)
-            
+
             this.initializeUI()
             this.setupStorageListener()
           } else {
@@ -58,7 +58,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 
   private initializeUI(): void {
     console.log('[LLM Chatbot Extension] Initializing UI...')
-    
+
     // Initialize statistics tracking
     chrome.storage.local.get('llm_stats', (result) => {
       try {
@@ -76,7 +76,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 
   private setupStorageListener(): void {
     console.log('[LLM Chatbot Extension] Setting up storage listener...')
-    
+
     // Listen for interaction data from content scripts
     chrome.storage.onChanged.addListener((changes, areaName) => {
       try {
@@ -93,7 +93,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 
   private updateStats(interactions: any[]): void {
     console.log(`[LLM Chatbot Extension] Updating stats with ${interactions.length} interactions`)
-    
+
     for (const interaction of interactions) {
       try {
         this.stats.totalInteractions += 1
@@ -101,7 +101,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 
         const platform = interaction.source || 'unknown'
         this.stats.platformCounts[platform] = (this.stats.platformCounts[platform] || 0) + 1
-        
+
         console.log(`[LLM Chatbot Extension] Updated: ${platform} - Total: ${this.stats.totalInteractions}`)
       } catch (error) {
         console.error('[LLM Chatbot Extension] Error updating stats for interaction:', interaction, error)
@@ -121,7 +121,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 }
 
 const llmChatbotModule = new LLMChatbotExtensionModule()
-registerWebmunkModule(llmChatbotModule)
+registerREXModule(llmChatbotModule)
 
 console.log('[LLM Chatbot Extension] Module registered and ready')
 

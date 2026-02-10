@@ -1,10 +1,10 @@
-import { WebmunkServiceWorkerModule, registerWebmunkModule, dispatchEvent } from '@bric/webmunk-core/service-worker'
+import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
 
 /**
  * LLM Chatbot Module - Service Worker Context
  * Responsible for: capturing ChatGPT chats (history + live), batching data, coordinating transmission via PDK
  */
-class LLMChatbotServiceWorkerModule extends WebmunkServiceWorkerModule {
+class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
   private enabled: boolean = false
   private pendingInteractions: any[] = []
   private config: any = null
@@ -491,6 +491,6 @@ class ChatGPTCaptureManager {
 }
 
 const llmChatbotModule = new LLMChatbotServiceWorkerModule()
-registerWebmunkModule(llmChatbotModule)
+registerREXModule(llmChatbotModule)
 
 export default llmChatbotModule
