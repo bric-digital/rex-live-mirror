@@ -61,22 +61,79 @@ BRIC module for capturing Q&A pairs, sources, and interactions from LLM chatbot 
 
 ## Configuration
 
-Backend configuration via Django AppConfiguration:
+This module reads from the `llm_capture` section of the backend config.
 
-```python
-# Django management command
-python manage.py create_perplexity_config --verbose
+### Schema
 
-# Applies selectors to AppConfiguration
-platforms:
-  perplexity:
-    enabled: true
-    selectors:
-      userQuestion: ':is(h1, div)[class*="group/query"] span.select-text'
-      assistantResponse: 'div[id^="markdown-content"]'
-      messageContainer: '.scrollable-container'
-      citationElements: 'a[href*="http"], [data-pplx-citation-url]'
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `enabled` | boolean | Yes | - | Enable/disable LLM capture |
+| `sources` | string[] | No | [] | Platform identifiers to capture (e.g., `["perplexity", "chatgpt"]`) |
+| `platforms` | object | Yes | - | Platform-specific configuration (see below) |
+| `batch_size` | number | No | 10 | Number of messages to batch before transmission |
+| `transmission_interval_ms` | number | No | 60000 | Interval between batch transmissions (milliseconds) |
+| `capture_logged_out` | boolean | No | true | Whether to capture when user is logged out |
+| `min_content_length` | number | No | 10 | Minimum content length to capture |
+
+### Platform Configuration
+
+Each platform in the `platforms` object has:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `enabled` | boolean | Yes | Enable/disable this platform |
+| `selectors` | object | Yes | DOM selectors for content extraction |
+| `login_detection` | object | No | Selectors to detect login state |
+
+### Example
+
+```json
+{
+  "llm_capture": {
+    "enabled": true,
+    "sources": ["perplexity", "chatgpt"],
+    "platforms": {
+      "chatgpt": {
+        "enabled": true,
+        "selectors": {
+          "contentDiv": "div[class*=\"prose\"]",
+          "loginButton": "button[data-testid=\"login-button\"]",
+          "userMessage": "[data-message-author-role=\"user\"]",
+          "profileButton": "[data-testid=\"user-profile\"]",
+          "conversationId": "window.location.pathname.split(\"/c/\")[1]",
+          "assistantMessage": "[data-message-author-role=\"assistant\"]",
+          "messageContainer": "#thread"
+        },
+        "login_detection": {
+          "loggedInSelector": "#history",
+          "loggedOutSelector": "button[data-testid=\"login-button\"]"
+        }
+      },
+      "perplexity": {
+        "enabled": true,
+        "selectors": {
+          "userQuestion": ":is(h1, div)[class*=\"group/query\"] span.select-text",
+          "citationTitle": "span.text-3xs.rounded-badge span",
+          "citationElements": "a[href*=\"http\"], [data-pplx-citation-url]",
+          "messageContainer": ".scrollable-container",
+          "assistantResponse": "div[id^=\"markdown-content\"]"
+        },
+        "login_detection": {
+          "loggedOutSelector": "[aria-label*=\"Sign in\"]"
+        }
+      }
+    },
+    "batch_size": 10,
+    "capture_logged_out": true,
+    "min_content_length": 10,
+    "transmission_interval_ms": 8000
+  }
+}
 ```
+
+### Selector Configuration Notes
+
+Selectors are CSS selectors used to find elements on the page. Since LLM platforms frequently update their DOM structure, selectors are configured server-side for easy updates without extension rebuilds.
 
 ## Data Format
 
@@ -105,9 +162,17 @@ Captured interactions transmitted as:
 
 ## Installation
 
-```bash
-npm install @bric/webmunk-live-mirror
+Add to your extension's `package.json` dependencies:
+
+```json
+{
+  "dependencies": {
+    "@bric/webmunk-live-mirror": "github:bric-digital/webmunk-live-mirror#main"
+  }
+}
 ```
+
+Then run `npm install`.
 
 ## Module Context Exports
 

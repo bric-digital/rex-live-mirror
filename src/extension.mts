@@ -1,11 +1,11 @@
-import { WebmunkExtensionModule, registerWebmunkModule } from '@bric/webmunk-core/extension'
+import { REXExtensionModule, registerREXModule } from '@bric/webmunk-core/extension'
 
 /**
  * LLM Chatbot Module - Extension Context
  * Runs in the extension's HTML page context
  * Responsible for: UI setup, status management, user-facing features
  */
-class LLMChatbotExtensionModule extends WebmunkExtensionModule {
+class LLMChatbotExtensionModule extends REXExtensionModule {
   private enabled: boolean = false
   private activeChats: Map<string, boolean> = new Map()
   private stats = {
@@ -121,7 +121,7 @@ class LLMChatbotExtensionModule extends WebmunkExtensionModule {
 }
 
 const llmChatbotModule = new LLMChatbotExtensionModule()
-registerWebmunkModule(llmChatbotModule)
+registerREXModule(llmChatbotModule)
 
 console.log('[LLM Chatbot Extension] Module registered and ready')
 
