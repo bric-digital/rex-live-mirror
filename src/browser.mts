@@ -1,4 +1,4 @@
-import { WebmunkClientModule, registerWebmunkModule } from '@bric/webmunk-core/browser'
+import { REXClientModule, registerREXModule } from '@bric/webmunk-core/browser'
 import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
@@ -33,7 +33,7 @@ interface CapturedInteractionInfo {
   length: number
 }
 
-class LLMChatbotBrowserModule extends WebmunkClientModule {
+class LLMChatbotBrowserModule extends REXClientModule {
   private enabled: boolean = false
   private parser: any = null
   private mutationObserver: MutationObserver | null = null
@@ -64,10 +64,10 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
     console.log('[LLM Chatbot Browser] Browser module initializing on:', window.location.href)
 
     // Get configuration from storage
-    chrome.storage.local.get('webmunkConfiguration', (result) => {
+    chrome.storage.local.get('REXConfiguration', (result) => {
       try {
-        if (result.webmunkConfiguration) {
-          const config = result.webmunkConfiguration
+        if (result.REXConfiguration) {
+          const config = result.REXConfiguration
           const llmConfig = config['llm_capture']
 
           console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
@@ -529,7 +529,7 @@ class LLMChatbotBrowserModule extends WebmunkClientModule {
 }
 
 const llmChatbotModule = new LLMChatbotBrowserModule()
-registerWebmunkModule(llmChatbotModule)
+registerREXModule(llmChatbotModule)
 
 console.log('[LLM Chatbot Browser] Module registered and ready')
 
