@@ -1,4 +1,4 @@
-import { REXClientModule, registerREXModule } from '@bric/webmunk-core/browser'
+import { REXClientModule, registerREXModule } from '@bric/rex-core/browser'
 import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
@@ -463,6 +463,37 @@ class LLMChatbotBrowserModule extends REXClientModule {
     }
   }
 
+  private sendBatchWithRetry(batch: LLMInteraction[], attempt: number = 1): void {
+    const MAX_RETRIES = 3
+    const RETRY_DELAY_MS = 2000 // 2s delay gives the service worker time to finish initializing
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(chrome.runtime.sendMessage as any)(
+      {
+        messageType: 'llmInteractionsBatch',
+        interactions: batch,
+      },
+      () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lastError = (chrome.runtime as any).lastError
+        if (lastError) {
+          const errorMsg = lastError.message || JSON.stringify(lastError)
+          console.warn(`[LLM Chatbot Browser] sendMessage failed (attempt ${attempt}/${MAX_RETRIES}): ${errorMsg}`)
+
+          if (attempt < MAX_RETRIES) {
+            setTimeout(() => this.sendBatchWithRetry(batch, attempt + 1), RETRY_DELAY_MS)
+          } else {
+            console.error(`[LLM Chatbot Browser] All ${MAX_RETRIES} attempts failed, re-queuing ${batch.length} interactions for next cycle`)
+            // Put the batch back at the front of the queue so the next transmitBatch() picks it up
+            this.interactions = [...batch, ...this.interactions]
+          }
+        } else {
+          console.log('[LLM Chatbot Browser] Batch sent to service worker successfully')
+        }
+      }
+    )
+  }
+
   private transmitBatch(): void {
     try {
       if (this.interactions.length === 0) {
@@ -500,23 +531,10 @@ class LLMChatbotBrowserModule extends REXClientModule {
 
       console.log(`[LLM Chatbot Browser] Transmitting batch of ${batch.length} interactions via message (${needsBackfill.length} waiting for ID)`)
 
-      // Send directly to service worker via message (single transmission path)
-      // Note: Removed storage-based transmission to prevent duplicate processing
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(chrome.runtime.sendMessage as any)(
-        {
-          messageType: 'llmInteractionsBatch',
-          interactions: batch,
-        },
-        () => {
-          const lastError = (chrome.runtime as any).lastError
-          if (lastError) {
-            console.error('[LLM Chatbot Browser] Error sending to service worker:', lastError)
-          } else {
-            console.log('[LLM Chatbot Browser] Batch sent to service worker successfully')
-          }
-        }
-      )
+      // Send with retry to handle service worker restart race condition.
+      // After a restart, modules register asynchronously; messages arriving
+      // before registration complete get dropped ("message port closed").
+      this.sendBatchWithRetry(batch)
     } catch (error) {
       console.error('[LLM Chatbot Browser] Error transmitting batch:', error)
     }

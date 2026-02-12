@@ -1,4 +1,4 @@
-import { REXExtensionModule, registerREXModule } from '@bric/webmunk-core/extension'
+import { REXExtensionModule, registerREXModule } from '@bric/rex-core/extension'
 
 /**
  * LLM Chatbot Module - Extension Context

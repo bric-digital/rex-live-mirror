@@ -1,4 +1,4 @@
-import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/webmunk-core/service-worker'
+import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
 
 /**
  * LLM Chatbot Module - Service Worker Context
