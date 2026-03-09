@@ -5,3 +5,9 @@ dist/
 *.d.ts
 *.d.ts.map
 .DS_Store
+tests/src/build/
+tests/extension/service-worker.bundle.js
+tests/extension/service-worker.bundle.js.map
+test-results/
+playwright-report/
+.perplexity-profile/

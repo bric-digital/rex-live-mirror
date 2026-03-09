@@ -9,6 +9,8 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
   private config: any = null
   private chatGPTCaptureManager: ChatGPTCaptureManager | null = null
   private transmittedHashes: Set<string> = new Set() // Track transmitted interactions to prevent duplicates
+  private transmittedDiscoverHeadlines: Set<string> = new Set() // Track transmitted Discover blurbs
+  private transmittedArticleUrls: Set<string> = new Set() // Track transmitted article URLs
 
   constructor() {
     super()
@@ -53,6 +55,24 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
     if (message.messageType === 'llmInteractionsBatch') {
       console.log(`[LLM Chatbot] Processing interaction batch of ${message.interactions.length} items`)
       this.handleInteractionBatch(message.interactions)
+      sendResponse({ success: true })
+
+      return true
+    } else if (message.messageType === 'discoverNewsBatch') {
+      console.log(`[LLM Chatbot] Processing Discover news batch of ${message.blurbs?.length || 0} blurbs`)
+      this.handleDiscoverBatch(message)
+      sendResponse({ success: true })
+
+      return true
+    } else if (message.messageType === 'discoverArticleBatch') {
+      console.log(`[LLM Chatbot] Processing Discover article: ${message.article?.headline?.substring(0, 50)}...`)
+      this.handleArticle(message)
+      sendResponse({ success: true })
+
+      return true
+    } else if (message.messageType === 'financeMarketSources') {
+      console.log(`[LLM Chatbot] Processing finance market sources: ${message.domains?.length || 0} domains`)
+      this.handleFinanceSources(message)
       sendResponse({ success: true })
 
       return true
@@ -156,6 +176,109 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
     chrome.storage.local.set({ llm_interactions: [] })
     
     console.log(`[LLM Chatbot] Transmission complete. Total unique interactions tracked: ${this.transmittedHashes.size}`)
+  }
+
+  /**
+   * Handle a batch of Discover news blurbs from the browser module
+   */
+  private handleDiscoverBatch(message: any): void {
+    const blurbs = message.blurbs || []
+    if (blurbs.length === 0) {
+      console.log('[LLM Chatbot] Empty Discover batch, nothing to process')
+      return
+    }
+
+    console.log(`[LLM Chatbot] Processing ${blurbs.length} Discover blurbs`)
+
+    for (const blurb of blurbs) {
+      // Deduplicate by headline
+      if (this.transmittedDiscoverHeadlines.has(blurb.headline)) {
+        console.log(`[LLM Chatbot] Skipping duplicate Discover blurb: ${blurb.headline.substring(0, 50)}...`)
+        continue
+      }
+
+      this.transmittedDiscoverHeadlines.add(blurb.headline)
+
+      // Dispatch to PDK as a separate event type for Discover news
+      dispatchEvent({
+        name: 'perplexity-discover-news',
+        date: new Date(message.timestamp || Date.now()),
+        platform: 'perplexity-discover',
+        blurb: {
+          headline: blurb.headline,
+          posted: blurb.posted,
+          source: blurb.source,
+          authors: blurb.authors || [],
+          summary: blurb.summary,
+          url: blurb.url,
+          citations: blurb.citations,
+        },
+        data_source: 'extension_discover_capture',
+      })
+
+      console.log(`[LLM Chatbot] Dispatched Discover blurb to PDK: ${blurb.headline.substring(0, 50)}...`)
+    }
+
+    console.log(`[LLM Chatbot] Discover batch processed. Total unique blurbs tracked: ${this.transmittedDiscoverHeadlines.size}`)
+  }
+
+  /**
+   * Handle a Discover article from the browser module
+   * Deduplicates by URL and dispatches to PDK with the latest content
+   */
+  private handleArticle(message: any): void {
+    const article = message.article
+    if (!article || !article.headline) {
+      console.log('[LLM Chatbot] Empty or invalid article, nothing to process')
+      return
+    }
+
+    const articleUrl = message.url || article.url || ''
+
+    // For articles, we allow re-transmission of the same URL if content has grown
+    // (progressive loading), so we track by URL but always dispatch
+    this.transmittedArticleUrls.add(articleUrl)
+
+    dispatchEvent({
+      name: 'perplexity-discover-article',
+      date: new Date(message.timestamp || Date.now()),
+      platform: 'perplexity-article',
+      article: {
+        headline: article.headline,
+        posted: article.posted,
+        source: article.source,
+        authors: article.authors || [],
+        'content*': article['content*'],
+        summary: article.summary,
+        url: articleUrl,
+        citations: article.citations,
+      },
+      data_source: 'extension_discover_capture',
+    })
+
+    console.log(`[LLM Chatbot] Dispatched article to PDK: "${article.headline.substring(0, 50)}..." (${article['content*']?.length || 0} chars)`)
+  }
+
+  /**
+   * Handle finance market summary sources from the browser module
+   */
+  private handleFinanceSources(message: any): void {
+    const domains = message.domains || []
+    if (domains.length === 0) {
+      console.log('[LLM Chatbot] Empty finance sources, nothing to process')
+      return
+    }
+
+    dispatchEvent({
+      name: 'perplexity-finance-sources',
+      date: new Date(message.timestamp || Date.now()),
+      platform: 'perplexity-finance',
+      domains: domains,
+      url: message.url || '',
+      data_source: 'extension_finance_capture',
+    })
+
+    console.log(`[LLM Chatbot] Dispatched ${domains.length} finance sources to PDK`)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

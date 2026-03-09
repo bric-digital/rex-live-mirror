@@ -3,6 +3,10 @@ import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
 import { ClaudeParser } from './chatbots/claude.js'
+import { PerplexityDiscoverParser } from './discover/perplexity-discover.js'
+import { PerplexityArticleParser } from './discover/perplexity-article.js'
+import { PerplexityFinanceParser } from './finance/perplexity-finance.js'
+import type { NewsBlurb, NewsArticle } from '@bric/rex-types/types'
 
 export interface ExtractedSource {
   source_title: string
@@ -25,7 +29,7 @@ export interface LLMInteraction {
 /**
  * LLM Chatbot Module - Browser Context (Content Script)
  * Runs in page context on chatbot websites
- * Responsible for: DOM observation, Q&A extraction, data capture
+ * Responsible for: DOM observation, Q&A extraction, data capture, Discover news extraction
  */
 // Track captured content for update detection
 interface CapturedInteractionInfo {
@@ -50,6 +54,18 @@ class LLMChatbotBrowserModule extends REXClientModule {
   private lastCheckedUrl: string = ''  // Track URL to detect changes
   private localSessionId: string | undefined = undefined  // Self-generated ID for logged-out sessions
   private hadMessagesInDOM: boolean = false  // Track if we previously had messages (for new conversation detection)
+  // Discover news capture
+  private discoverParser: PerplexityDiscoverParser | null = null
+  private capturedHeadlines: Set<string> = new Set()
+  private discoverBlurbs: NewsBlurb[] = []
+  // Article capture
+  private articleParser: PerplexityArticleParser | null = null
+  private capturedArticle: NewsArticle | null = null
+  private articleTransmitted: boolean = false
+  // Finance capture
+  private financeParser: PerplexityFinanceParser | null = null
+  private financeSources: string[] = []
+  private financeTransmitted: boolean = false
 
   constructor() {
     super()
@@ -69,8 +85,44 @@ class LLMChatbotBrowserModule extends REXClientModule {
         if (result.REXConfiguration) {
           const config = result.REXConfiguration
           const llmConfig = config['llm_capture']
+          const newsConfig = config['news_capture']
 
           console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
+
+          // Check if this is a Finance, Discover, or article page BEFORE checking for chatbot
+          const currentURL = window.location.href
+
+          // Finance page: /finance
+          if (newsConfig?.enabled && currentURL.includes('perplexity.ai/finance')) {
+            const enabledSources = newsConfig.sources || []
+            if (enabledSources.includes('perplexity-finance')) {
+              console.log('[LLM Chatbot Browser] Finance page detected, initializing finance capture')
+              this.enabled = true
+              this.initializeFinanceCapture()
+              return
+            }
+          }
+
+          if (newsConfig?.enabled && currentURL.includes('perplexity.ai/discover')) {
+            const enabledSources = newsConfig.sources || []
+            if (enabledSources.includes('perplexity-discover')) {
+              const discoverConfig = newsConfig.platforms?.perplexity_discover || {}
+
+              // Article page: /discover/you/SLUG
+              if (currentURL.match(/perplexity\.ai\/discover\/you\/.+/)) {
+                console.log('[LLM Chatbot Browser] Discover article page detected, initializing article capture')
+                this.enabled = true
+                this.initializeArticleCapture(discoverConfig)
+                return
+              }
+
+              // Discover feed page: /discover (no /you/)
+              console.log('[LLM Chatbot Browser] Discover feed page detected, initializing news capture')
+              this.enabled = true
+              this.initializeDiscoverCapture(discoverConfig)
+              return  // Don't also initialize chatbot capture
+            }
+          }
 
           if (llmConfig?.enabled) {
             this.enabled = true
@@ -538,6 +590,354 @@ class LLMChatbotBrowserModule extends REXClientModule {
     } catch (error) {
       console.error('[LLM Chatbot Browser] Error transmitting batch:', error)
     }
+  }
+
+  /**
+   * Initialize Discover page news capture
+   */
+  private initializeDiscoverCapture(config: any): void {
+    try {
+      this.discoverParser = new PerplexityDiscoverParser(config)
+      console.log('[LLM Chatbot Browser] Discover parser initialized')
+      this.startDiscoverCapture()
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error initializing Discover capture:', error)
+    }
+  }
+
+  /**
+   * Start Discover page capture with MutationObserver for infinite scroll
+   */
+  private startDiscoverCapture(): void {
+    try {
+      console.log('[LLM Chatbot Browser] Starting Discover capture...')
+
+      // Set up mutation observer for DOM changes (infinite scroll, tab switches)
+      this.mutationObserver = new MutationObserver(() => {
+        if (this.processDebounceTimer) {
+          clearTimeout(this.processDebounceTimer)
+        }
+        this.processDebounceTimer = setTimeout(() => {
+          try {
+            this.processDiscoverPage()
+          } catch (error) {
+            console.error('[LLM Chatbot Browser] Error in Discover mutation callback:', error)
+          }
+        }, this.DEBOUNCE_MS)
+      })
+
+      this.mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      })
+
+      console.log('[LLM Chatbot Browser] Discover DOM mutation observer started')
+
+      // Initial page processing
+      setTimeout(() => this.processDiscoverPage(), 1000)
+
+      // Periodic batch transmission
+      setInterval(() => {
+        try {
+          this.transmitDiscoverBatch()
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error in Discover transmission interval:', error)
+        }
+      }, 30000) // Transmit every 30 seconds
+
+      console.log('[LLM Chatbot Browser] Discover transmission interval set')
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error starting Discover capture:', error)
+    }
+  }
+
+  /**
+   * Process the Discover page: extract blurbs and queue new ones
+   */
+  private processDiscoverPage(): void {
+    if (!this.discoverParser) return
+
+    try {
+      const blurbs = this.discoverParser.extractNewsBlurbs()
+      let newCount = 0
+
+      for (const blurb of blurbs) {
+        // Deduplicate by headline
+        if (this.capturedHeadlines.has(blurb.headline)) {
+          continue
+        }
+
+        this.capturedHeadlines.add(blurb.headline)
+        this.discoverBlurbs.push(blurb)
+        newCount++
+      }
+
+      if (newCount > 0) {
+        console.log(`[LLM Chatbot Browser] Discover: captured ${newCount} new blurbs (${this.capturedHeadlines.size} total unique)`)
+      }
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error processing Discover page:', error)
+    }
+  }
+
+  /**
+   * Transmit queued Discover blurbs to the service worker
+   */
+  private transmitDiscoverBatch(): void {
+    if (this.discoverBlurbs.length === 0) {
+      console.debug('[LLM Chatbot Browser] No Discover blurbs to transmit')
+      return
+    }
+
+    const batch = this.discoverBlurbs.splice(0, this.discoverBlurbs.length)
+    const now = Date.now()
+    console.log(`[LLM Chatbot Browser] Transmitting ${batch.length} Discover blurbs`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(chrome.runtime.sendMessage as any)(
+      {
+        messageType: 'discoverNewsBatch',
+        source: 'perplexity-discover',
+        url: window.location.href,
+        timestamp: now,
+        blurbs: batch,
+      },
+      () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lastError = (chrome.runtime as any).lastError
+        if (lastError) {
+          console.warn(`[LLM Chatbot Browser] Discover batch sendMessage failed:`, lastError.message || lastError)
+          // Re-queue the batch
+          this.discoverBlurbs = [...batch, ...this.discoverBlurbs]
+        } else {
+          console.log('[LLM Chatbot Browser] Discover batch sent to service worker successfully')
+        }
+      }
+    )
+  }
+
+  /**
+   * Initialize Discover article capture
+   */
+  private initializeArticleCapture(config: any): void {
+    try {
+      this.articleParser = new PerplexityArticleParser(config)
+      console.log('[LLM Chatbot Browser] Article parser initialized')
+      this.startArticleCapture()
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error initializing article capture:', error)
+    }
+  }
+
+  /**
+   * Start article capture with MutationObserver (article content may load progressively)
+   */
+  private startArticleCapture(): void {
+    try {
+      console.log('[LLM Chatbot Browser] Starting article capture...')
+
+      this.mutationObserver = new MutationObserver(() => {
+        if (this.processDebounceTimer) {
+          clearTimeout(this.processDebounceTimer)
+        }
+        this.processDebounceTimer = setTimeout(() => {
+          try {
+            this.processArticlePage()
+          } catch (error) {
+            console.error('[LLM Chatbot Browser] Error in article mutation callback:', error)
+          }
+        }, this.DEBOUNCE_MS)
+      })
+
+      this.mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      })
+
+      console.log('[LLM Chatbot Browser] Article DOM mutation observer started')
+
+      // Initial processing (with delay for content to load)
+      setTimeout(() => this.processArticlePage(), 1000)
+
+      // Transmit after content settles (articles don't infinite-scroll, so shorter interval)
+      setInterval(() => {
+        try {
+          this.transmitArticle()
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error in article transmission interval:', error)
+        }
+      }, 15000) // Transmit every 15 seconds
+
+      console.log('[LLM Chatbot Browser] Article transmission interval set')
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error starting article capture:', error)
+    }
+  }
+
+  /**
+   * Process the article page: extract the article and update if content grew
+   */
+  private processArticlePage(): void {
+    if (!this.articleParser) return
+
+    try {
+      const article = this.articleParser.extractArticle()
+      if (!article) return
+
+      // Update captured article if content grew (progressive loading)
+      const currentContentLen = article['content*'].length
+      const previousContentLen = this.capturedArticle?.['content*']?.length || 0
+
+      if (currentContentLen > previousContentLen) {
+        this.capturedArticle = article
+        this.articleTransmitted = false // Re-transmit with updated content
+        console.log(`[LLM Chatbot Browser] Article captured/updated: ${currentContentLen} chars (was ${previousContentLen})`)
+      }
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error processing article page:', error)
+    }
+  }
+
+  /**
+   * Transmit captured article to the service worker
+   */
+  private transmitArticle(): void {
+    if (!this.capturedArticle || this.articleTransmitted) {
+      return
+    }
+
+    this.articleTransmitted = true
+    const now = Date.now()
+    console.log(`[LLM Chatbot Browser] Transmitting article: "${this.capturedArticle.headline.substring(0, 50)}..."`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(chrome.runtime.sendMessage as any)(
+      {
+        messageType: 'discoverArticleBatch',
+        source: 'perplexity-article',
+        url: window.location.href,
+        timestamp: now,
+        article: this.capturedArticle,
+      },
+      () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lastError = (chrome.runtime as any).lastError
+        if (lastError) {
+          console.warn(`[LLM Chatbot Browser] Article sendMessage failed:`, lastError.message || lastError)
+          this.articleTransmitted = false // Retry next interval
+        } else {
+          console.log('[LLM Chatbot Browser] Article sent to service worker successfully')
+        }
+      }
+    )
+  }
+
+  /**
+   * Initialize finance market summary source capture
+   */
+  private initializeFinanceCapture(): void {
+    try {
+      this.financeParser = new PerplexityFinanceParser()
+      console.log('[LLM Chatbot Browser] Finance parser initialized')
+      this.startFinanceCapture()
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error initializing finance capture:', error)
+    }
+  }
+
+  /**
+   * Start finance capture with MutationObserver (content may load after SPA render)
+   */
+  private startFinanceCapture(): void {
+    try {
+      console.log('[LLM Chatbot Browser] Starting finance capture...')
+
+      this.mutationObserver = new MutationObserver(() => {
+        if (this.processDebounceTimer) {
+          clearTimeout(this.processDebounceTimer)
+        }
+        this.processDebounceTimer = setTimeout(() => {
+          try {
+            this.processFinancePage()
+          } catch (error) {
+            console.error('[LLM Chatbot Browser] Error in finance mutation callback:', error)
+          }
+        }, this.DEBOUNCE_MS)
+      })
+
+      this.mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      })
+
+      // Initial processing with delay for SPA content to render
+      setTimeout(() => this.processFinancePage(), 1000)
+
+      // Transmit after content settles
+      setInterval(() => {
+        try {
+          this.transmitFinanceSources()
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error in finance transmission interval:', error)
+        }
+      }, 15000)
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error starting finance capture:', error)
+    }
+  }
+
+  /**
+   * Process the finance page: extract market summary sources
+   */
+  private processFinancePage(): void {
+    if (!this.financeParser) return
+
+    try {
+      const domains = this.financeParser.extractMarketSummarySources()
+      if (domains.length === 0) return
+
+      if (domains.length > this.financeSources.length) {
+        this.financeSources = domains
+        this.financeTransmitted = false
+        console.log(`[LLM Chatbot Browser] Finance sources captured: ${domains.length} domains`)
+      }
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error processing finance page:', error)
+    }
+  }
+
+  /**
+   * Transmit captured finance sources to the service worker
+   */
+  private transmitFinanceSources(): void {
+    if (this.financeSources.length === 0 || this.financeTransmitted) {
+      return
+    }
+
+    this.financeTransmitted = true
+    const now = Date.now()
+    console.log(`[LLM Chatbot Browser] Transmitting ${this.financeSources.length} finance source domains`)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(chrome.runtime.sendMessage as any)(
+      {
+        messageType: 'financeMarketSources',
+        source: 'perplexity-finance',
+        url: window.location.href,
+        timestamp: now,
+        domains: this.financeSources,
+      },
+      () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const lastError = (chrome.runtime as any).lastError
+        if (lastError) {
+          console.warn(`[LLM Chatbot Browser] Finance sendMessage failed:`, lastError.message || lastError)
+          this.financeTransmitted = false
+        } else {
+          console.log('[LLM Chatbot Browser] Finance sources sent to service worker successfully')
+        }
+      }
+    )
   }
 
   checkRequirement(requirement: string): Promise<boolean> {

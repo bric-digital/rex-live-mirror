@@ -1,40 +1,54 @@
 {
-  "name": "@bric/webmunk-live-mirror",
+  "name": "@bric/rex-live-mirror",
   "version": "0.0.1",
-  "description": "Webmunk module for capturing Q&A pairs from LLM chatbot platforms.",
+  "description": "REX module for capturing Q&A pairs from LLM chatbot platforms and news from discovery feeds.",
   "keywords": [
     "extension",
-    "webmunk",
+    "rex",
     "chatbot",
     "qa-capture",
-    "llm"
+    "llm",
+    "news-capture"
   ],
   "author": "Behavioral Research Innovation Center",
   "type": "module",
-  "homepage": "https://github.com/bric-digital/webmunk-live-mirror",
+  "homepage": "https://github.com/bric-digital/rex-live-mirror",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bric-digital/webmunk-live-mirror.git"
+    "url": "git+https://github.com/bric-digital/rex-live-mirror.git"
   },
   "exports": {
     "./extension": "./src/extension.mts",
     "./browser": "./src/browser.mts",
     "./service-worker": "./src/service-worker.mts",
     "./chatbots/chatgpt": "./src/chatbots/chatgpt.ts",
-    "./chatbots/perplexity": "./src/chatbots/perplexity.ts"
+    "./chatbots/perplexity": "./src/chatbots/perplexity.ts",
+    "./discover/perplexity-discover": "./src/discover/perplexity-discover.ts",
+    "./discover/perplexity-article": "./src/discover/perplexity-article.ts",
+    "./finance/perplexity-finance": "./src/finance/perplexity-finance.ts"
   },
   "scripts": {
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "pretest": "node tests/scripts/build-test-bundle.js",
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=dot",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.48.0",
     "@types/chrome": "^0.0.275",
+    "@types/node": "^24.10.0",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.0",
     "jiti": "^2.6.1",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.13.0"
   },
   "dependencies": {
-    "@bric/rex-core": "github:bric-digital/rex-core#main"
+    "@bric/rex-core": "github:bric-digital/rex-core#main",
+    "@bric/rex-types": "github:bric-digital/rex-types#main"
   }
 }

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Discover Article Mock Page</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; }
+    </style>
+</head>
+<body>
+    <!--
+      Mock DOM structure replicating the REAL Perplexity Discover article page layout.
+      Based on the actual rendered DOM captured from discover_article_rendered.html.
+      Used by article-parser.spec.ts for unit testing the parser.
+    -->
+
+    <div class="w-full my-md md:my-lg px-md md:px-lg">
+        <div class="@container mx-auto w-full" style="max-width: 720px;">
+            <div class="grid gap-6">
+
+                <!-- ARTICLE MAIN CONTAINER -->
+                <div data-testid="article-main">
+                    <div class="min-w-0">
+                        <div class="relative min-h-[calc(100vh-68px)] w-full pb-xl">
+                            <div class="space-y-md md:space-y-lg mx-auto w-full">
+
+                                <!-- ========== INTRO SECTION ========== -->
+                                <div class="flex flex-col grid-cols-8 gap-md md:gap-xl max-w-threadWidth w-full md:grid">
+                                    <div class="space-y-sm md:space-y-md col-span-12 col-start-1 row-start-1">
+                                        <div class="flex flex-col grid-cols-8 gap-md md:gap-xl max-w-threadWidth w-full md:grid">
+                                            <div class="col-span-8 space-y-md">
+
+                                                <!-- HEADLINE -->
+                                                <div class="gap-lg flex items-center">
+                                                    <div class="w-full">
+                                                        <div class="gap-sm group relative flex w-full items-center">
+                                                            <div class="prose">
+                                                                <h2 class="font-editorial md:!text-[2.3rem] font-serif text-3xl leading-[1.3] font-normal text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    <span class="rounded-md font-editorial text-[2rem] placeholder:text-[2rem] md:text-[2.3rem] md:placeholder:text-[2.3rem] leading-tight">Video shows US Tomahawk missile hitting near Iran school that killed 175</span>
+                                                                </h2>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- INTRO PARAGRAPHS (prose.inline) -->
+                                                <div class="relative">
+                                                    <div class="font-sans text-base text-foreground text-pretty selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                        <div>
+                                                            <div class="prose dark:prose-invert inline leading-relaxed break-words min-w-0 [word-break:break-word] prose-strong:font-bold [&amp;_&gt;*:first-child]:mt-0 [&amp;_&gt;*:last-child]:mb-0">
+                                                                <p class="my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2">
+                                                                    Newly released video footage, authenticated by the investigative outlet Bellingcat, shows a US Tomahawk cruise missile striking an Islamic Revolutionary Guard Corps naval facility in Minab, Iran, on February 28 — the same location where a girls' elementary school was destroyed, killing at least 175 people, most of them children between the ages of 7 and 12.</p>
+                                                                <p class="my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2">
+                                                                    The footage, originally released by Iran's Mehr News Agency and geolocated by Bellingcat, also captures smoke already rising from the vicinity of the Shajareh Tayyebeh girls' school at the time the missile hits the adjacent IRGC compound. Bellingcat noted that the United States is the only participant in the conflict known to possess Tomahawk missiles, and that Israel does not operate the weapon. The findings add to a growing body of evidence from The New York Times, CNN, CBC, and NPR suggesting the US military was responsible for the deadliest single strike on civilians since the war began on February 28.<span class="citation-nbsp"></span><span class="group/trigger inline-flex min-w-0" data-state="closed"><span class="citation inline" style="width: 45px;"><span class="relative -mt-px max-w-full min-w-0 whitespace-nowrap -top-px font-sans text-base text-foreground select-none selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"><span class="text-3xs rounded-badge group min-w-4 max-w-full cursor-pointer text-center align-middle font-mono tabular-nums font-normal transition-colors duration-150 inline-flex items-center py-[0.1875rem] leading-snug px-[0.3rem] [@media(hover:hover)]:hover:bg-subtle group-data-[state=open]/trigger:bg-subtle border-subtlest ring-subtlest divide-subtlest bg-quiet"><span class="inline-block relative !mt-0 ![vertical-align:unset] max-w-[25ch] overflow-hidden">cnn</span><span class="inline-block ml-xs mr-px !mt-0 ![vertical-align:unset]"><span class="opacity-50">+3</span></span></span></span></span></span>
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- PUBLISHED TIME + PERPLEXITY LOGO ROW -->
+                                                <div class="pb-xs border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                    <div class="relative">
+                                                        <div class="gap-sm pointer-events-none flex items-center opacity-0 grayscale duration-150 !pointer-events-auto !opacity-100 !grayscale-0">
+                                                            <div class="gap-sm flex items-center">
+                                                                <div class="aspect-square relative h-6 overflow-hidden">
+                                                                    <!-- Perplexity logo placeholder -->
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="gap-x-xs flex items-center">
+                                                        <div class="gap-x-sm w-full border-subtlest ring-subtlest divide-subtlest flex items-center">
+                                                            <div class="gap-xs flex items-center">
+                                                                <svg role="img" class="inline-flex fill-current shrink-0 tabler-icon shrink-0 size-4 text-quiet" width="20" height="20">
+                                                                    <use xlink:href="#pplx-icon-clock"></use>
+                                                                </svg>
+                                                                <div class="font-sans text-xs font-normal text-quiet selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"
+                                                                     data-testid="article-published-meta">
+                                                                    Published</div>
+                                                                <div class="gap-x-xs flex cursor-default items-center font-sans text-xs font-normal text-quiet selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"
+                                                                     data-state="closed">
+                                                                    <span class="truncate">4 hours ago</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="w-full flex-1"></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- SOURCE CITATION CARDS -->
+                                                <div class="mt-lg isolate">
+                                                    <div class="mb-0 pb-px">
+                                                        <div class="pb-sm">
+                                                            <div class="border-subtlest ring-subtlest divide-subtlest">
+                                                                <div class="scrollbar-none -mx-md px-md w-screen overflow-x-auto md:mx-0 md:w-full md:px-0">
+                                                                    <div class="scrollbar-none table w-[150vw] md:w-auto border-subtlest ring-subtlest divide-subtlest md:flex">
+                                                                        <div class="gap-sm grid grid-flow-col md:grid-cols-[1fr_1fr_1fr_96px] -mx-pageHorizontalPadding px-pageHorizontalPadding scrollbar-none overflow-x-auto md:mx-0 md:px-0 border-subtlest ring-subtlest divide-subtlest">
+
+                                                                            <!-- Source card: CNN -->
+                                                                            <div class="w-[40vw] md:w-auto min-w-0 border-subtlest ring-subtlest divide-subtlest">
+                                                                                <span class="inline-flex w-full" aria-label="Analysis suggests US was responsible for deadly strike - CNN" data-state="closed">
+                                                                                    <div class="size-full border-subtlest ring-subtlest divide-subtlest">
+                                                                                        <a rel="noopener" class="group flex size-full cursor-pointer items-stretch" target="_blank" href="https://www.cnn.com/2026/03/06/middleeast/iran-minab-elementary-school-investigation-us-strike-intl">
+                                                                                            <div class="w-full">
+                                                                                                <div class="group relative flex w-full items-stretch h-full cursor-pointer">
+                                                                                                    <div class="w-full rounded-lg border-subtlest ring-subtlest divide-subtlest transition duration-normal bg-subtle md:hover:!bg-quiet flex">
+                                                                                                        <div class="gap-xs pointer-events-none relative flex size-full max-w-full select-none flex-col min-w-0 px-sm pb-sm pt-sm">
+                                                                                                            <div class="flex w-full items-center justify-between">
+                                                                                                                <div class="space-x-xs flex min-w-0">
+                                                                                                                    <div class="gap-x-1.5 min-w-0 border-subtlest ring-subtlest divide-subtlest flex items-center">
+                                                                                                                        <div class="relative flex-none font-sans text-xs font-medium text-quiet">
+                                                                                                                            <div class="flex size-4 items-center justify-center">
+                                                                                                                                <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                                                                                    <img class="relative block" alt="cnn.com favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=cnn.com" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <div class="truncate min-w-0 grow break-all transition-all duration-300 font-sans text-xs font-medium text-quiet">cnn</div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            <div class="min-w-0 font-sans text-xs font-medium text-foreground">
+                                                                                                                <span class="line-clamp-1 text-left md:line-clamp-2 min-w-0 [overflow-wrap:break-word]">Analysis suggests US was responsible for deadly strike - CNN</span>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <!-- Source card: Politico -->
+                                                                            <div class="w-[40vw] md:w-auto min-w-0 border-subtlest ring-subtlest divide-subtlest">
+                                                                                <span class="inline-flex w-full" aria-label="Trump says Iran at fault for strike on girls school" data-state="closed">
+                                                                                    <div class="size-full border-subtlest ring-subtlest divide-subtlest">
+                                                                                        <a rel="noopener" class="group flex size-full cursor-pointer items-stretch" target="_blank" href="https://www.politico.com/news/2026/03/07/trump-iran-girls-school-strike-00818163">
+                                                                                            <div class="w-full">
+                                                                                                <div class="group relative flex w-full items-stretch h-full cursor-pointer">
+                                                                                                    <div class="w-full rounded-lg border-subtlest ring-subtlest divide-subtlest transition duration-normal bg-subtle md:hover:!bg-quiet flex">
+                                                                                                        <div class="gap-xs pointer-events-none relative flex size-full max-w-full select-none flex-col min-w-0 px-sm pb-sm pt-sm">
+                                                                                                            <div class="flex w-full items-center justify-between">
+                                                                                                                <div class="space-x-xs flex min-w-0">
+                                                                                                                    <div class="gap-x-1.5 min-w-0 border-subtlest ring-subtlest divide-subtlest flex items-center">
+                                                                                                                        <div class="relative flex-none font-sans text-xs font-medium text-quiet">
+                                                                                                                            <div class="flex size-4 items-center justify-center">
+                                                                                                                                <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                                                                                    <img class="relative block" alt="politico.com favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=politico.com" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <div class="truncate min-w-0 grow break-all transition-all duration-300 font-sans text-xs font-medium text-quiet">politico</div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            <div class="min-w-0 font-sans text-xs font-medium text-foreground">
+                                                                                                                <span class="line-clamp-1 text-left md:line-clamp-2 min-w-0 [overflow-wrap:break-word]">Trump says Iran at fault for strike on girls school</span>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <!-- Source card: Wikipedia -->
+                                                                            <div class="w-[40vw] md:w-auto min-w-0 border-subtlest ring-subtlest divide-subtlest">
+                                                                                <span class="inline-flex w-full" aria-label="2026 Minab school airstrike - Wikipedia" data-state="closed">
+                                                                                    <div class="size-full border-subtlest ring-subtlest divide-subtlest">
+                                                                                        <a rel="noopener" class="group flex size-full cursor-pointer items-stretch" target="_blank" href="https://en.wikipedia.org/wiki/2026_Minab_school_airstrike">
+                                                                                            <div class="w-full">
+                                                                                                <div class="group relative flex w-full items-stretch h-full cursor-pointer">
+                                                                                                    <div class="w-full rounded-lg border-subtlest ring-subtlest divide-subtlest transition duration-normal bg-subtle md:hover:!bg-quiet flex">
+                                                                                                        <div class="gap-xs pointer-events-none relative flex size-full max-w-full select-none flex-col min-w-0 px-sm pb-sm pt-sm">
+                                                                                                            <div class="flex w-full items-center justify-between">
+                                                                                                                <div class="space-x-xs flex min-w-0">
+                                                                                                                    <div class="gap-x-1.5 min-w-0 border-subtlest ring-subtlest divide-subtlest flex items-center">
+                                                                                                                        <div class="relative flex-none font-sans text-xs font-medium text-quiet">
+                                                                                                                            <div class="flex size-4 items-center justify-center">
+                                                                                                                                <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                                                                                    <img class="relative block" alt="en.wikipedia.org favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=en.wikipedia.org" style="width: 16px; height: 16px;">
+                                                                                                                                    <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                        <div class="truncate min-w-0 grow break-all transition-all duration-300 font-sans text-xs font-medium text-quiet">en.wikipedia</div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                            <div class="min-w-0 font-sans text-xs font-medium text-foreground">
+                                                                                                                <span class="line-clamp-1 text-left md:line-clamp-2 min-w-0 [overflow-wrap:break-word]">2026 Minab school airstrike - Wikipedia</span>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </a>
+                                                                                    </div>
+                                                                                </span>
+                                                                            </div>
+
+                                                                            <!-- "+22 sources" overflow card with reuters + nytimes favicons -->
+                                                                            <div class="p-sm h-full cursor-pointer rounded-lg md:w-auto md:justify-between select-none border-subtlest ring-subtlest divide-subtlest transition duration-normal bg-subtle md:hover:!bg-quiet flex flex-col gap-xs">
+                                                                                <div class="hidden sm:flex gap-xs flex-wrap items-center border-subtlest ring-subtlest divide-subtlest">
+                                                                                    <div class="border-subtlest ring-subtlest divide-subtlest">
+                                                                                        <div class="border-subtlest ring-subtlest divide-subtlest flex items-center gap-xs">
+                                                                                            <div class="gap-x-sm flex-none border-subtlest ring-subtlest divide-subtlest">
+                                                                                                <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                                                    <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                                                    <img class="relative block" alt="reuters.com favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=reuters.com" style="width: 16px; height: 16px;">
+                                                                                                    <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div class="border-subtlest ring-subtlest divide-subtlest">
+                                                                                        <div class="border-subtlest ring-subtlest divide-subtlest flex items-center gap-xs">
+                                                                                            <div class="gap-x-sm flex-none border-subtlest ring-subtlest divide-subtlest">
+                                                                                                <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                                                    <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                                                    <img class="relative block" alt="nytimes.com favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=nytimes.com" style="width: 16px; height: 16px;">
+                                                                                                    <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="gap-1 sm:flex-row sm:items-center border-subtlest ring-subtlest divide-subtlest flex flex-col">
+                                                                                    <div class="font-sans text-xs font-medium text-quiet">+22 sources</div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+
+                                        <!-- HERO IMAGE -->
+                                        <div class="flex flex-col grid-cols-8 gap-md md:gap-xl max-w-threadWidth w-full md:grid">
+                                            <div class="col-span-8">
+                                                <div class="gap-lg flex justify-stretch max-h-[450px] md:max-h-[350px] md:min-h-[200px]">
+                                                    <div class="relative h-auto max-h-[inherit] w-full transform-gpu group cursor-zoom-in">
+                                                        <div class="relative h-full">
+                                                            <div class="h-full overflow-hidden rounded-md shadow-md duration-150 hover:scale-[1.02] hover:shadow-lg">
+                                                                <div class="" style="transform: translateY(-65px);">
+                                                                    <div class="h-full relative z-[3]">
+                                                                        <div class="bg-subtle group relative size-full overflow-hidden rounded-md">
+                                                                            <div class="absolute inset-0"></div>
+                                                                            <img alt="U.S. Tomahawk Hit Naval Base Beside Iranian School, Video Shows - The New York Times"
+                                                                                 class="size-full max-h-[inherit] object-cover object-left-top !object-center !h-auto transition-all ease-in-out"
+                                                                                 draggable="true"
+                                                                                 src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='400'%3E%3Crect fill='%23999' width='720' height='400'/%3E%3C/svg%3E">
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <!-- ========== BODY SECTION 1: "Trump Blames Iran as Evidence Points to US" ========== -->
+                                <div class="pt-md">
+                                    <div data-last-section="false"
+                                         class="flex flex-col grid-cols-8 gap-md md:gap-xl max-w-threadWidth w-full md:grid pointer-events-none"
+                                         style="opacity: 1; transform: none;">
+                                        <div class="col-span-8 pointer-events-auto isolate">
+                                            <div class="group/section relative isolate">
+                                                <div class=" relative z-10">
+                                                    <div class="flex">
+                                                        <div class="mb-md">
+                                                            <div class="w-full">
+                                                                <div class="gap-sm group relative flex w-full items-center">
+                                                                    <div class="prose">
+                                                                        <h2 class="font-editorial font-sans text-lg font-bold text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                            <span class="rounded-md">Trump Blames Iran as Evidence Points to US</span>
+                                                                        </h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="height: 0px;">
+                                                        <div></div>
+                                                    </div>
+                                                </div>
+                                                <div class="min-h-[58px]">
+                                                    <div style="opacity: 1;">
+                                                        <div id="markdown-content-0" class="font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                            <div>
+                                                                <div class="prose dark:prose-invert inline leading-relaxed break-words min-w-0 [word-break:break-word] prose-strong:font-bold [&amp;_&gt;*:first-child]:mt-0 [&amp;_&gt;*:last-child]:mb-0">
+                                                                    <p class="my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2">
+                                                                        The video's release came one day after President Trump, speaking aboard Air Force One on March 7, blamed Iran for the school attack. "We think it was done by Iran. Because they are very inaccurate, as you know, with their munitions. They have no accuracy whatsoever," Trump told reporters, according to Politico. Defense Secretary Pete Hegseth added that "The only side that targets civilians is Iran" while noting an investigation remains active.<span class="citation-nbsp"></span><span class="group/trigger inline-flex min-w-0" data-state="closed"><span class="citation inline" style="width: 75px;"><span class="relative -mt-px max-w-full min-w-0 whitespace-nowrap -top-px font-sans text-base text-foreground select-none"><span class="text-3xs rounded-badge group min-w-4 max-w-full cursor-pointer text-center align-middle font-mono tabular-nums font-normal transition-colors duration-150 inline-flex items-center py-[0.1875rem] leading-snug px-[0.3rem] border-subtlest ring-subtlest divide-subtlest bg-quiet"><span class="inline-block relative !mt-0 ![vertical-align:unset] max-w-[25ch] overflow-hidden">politico</span><span class="inline-block ml-xs mr-px !mt-0 ![vertical-align:unset]"><span class="opacity-50">+1</span></span></span></span></span></span>
+                                                                    </p>
+                                                                    <p class="my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2">
+                                                                        Those claims have been challenged by multiple independent investigations. Reuters reported on March 5, citing two US military officials familiar with an internal probe, that American investigators believe US forces likely carried out the strike. CNN's analysis found the school was hit at the same time as precision strikes on the adjacent IRGC base, with geolocated videos showing smoke rising from both sites simultaneously.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ========== BODY SECTION 2: "International Condemnation" ========== -->
+                                <div class="pt-md">
+                                    <div data-last-section="true"
+                                         class="flex flex-col grid-cols-8 gap-md md:gap-xl max-w-threadWidth w-full md:grid pointer-events-none"
+                                         style="opacity: 1; transform: none;">
+                                        <div class="col-span-8 pointer-events-auto isolate">
+                                            <div class="group/section relative isolate">
+                                                <div class=" relative z-10">
+                                                    <div class="flex">
+                                                        <div class="mb-md">
+                                                            <div class="w-full">
+                                                                <div class="gap-sm group relative flex w-full items-center">
+                                                                    <div class="prose">
+                                                                        <h2 class="font-editorial font-sans text-lg font-bold text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                            <span class="rounded-md">International Condemnation</span>
+                                                                        </h2>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div style="height: 0px;">
+                                                        <div></div>
+                                                    </div>
+                                                </div>
+                                                <div class="min-h-[58px]">
+                                                    <div style="opacity: 1;">
+                                                        <div id="markdown-content-1" class="font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                            <div>
+                                                                <div class="prose dark:prose-invert inline leading-relaxed break-words min-w-0 [word-break:break-word] prose-strong:font-bold [&amp;_&gt;*:first-child]:mt-0 [&amp;_&gt;*:last-child]:mb-0">
+                                                                    <p class="my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2">
+                                                                        Human Rights Watch called for the strike to be investigated as a war crime. UNESCO condemned the bombing as "grave violation of humanitarian law," warning that "attacks against educational institutions endanger students and teachers and undermine the right to education". UN High Commissioner for Human Rights Volker T&uuml;rk said the UN has "significant concerns" about whether the strikes complied with international humanitarian law.<span class="citation-nbsp"></span><span class="group/trigger inline-flex min-w-0" data-state="closed"><span class="citation inline" style="width: 135px;"><span class="relative -mt-px max-w-full min-w-0 whitespace-nowrap -top-px font-sans text-base text-foreground select-none"><span class="text-3xs rounded-badge group min-w-4 max-w-full cursor-pointer text-center align-middle font-mono tabular-nums font-normal transition-colors duration-150 inline-flex items-center py-[0.1875rem] leading-snug px-[0.3rem] border-subtlest ring-subtlest divide-subtlest bg-quiet"><span class="inline-block relative !mt-0 ![vertical-align:unset] max-w-[25ch] overflow-hidden">Human Rights Watch</span><span class="inline-block ml-xs mr-px !mt-0 ![vertical-align:unset]"><span class="opacity-50">+2</span></span></span></span></span></span>
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Section source badge (bottom of last section) -->
+                                                <div class="mt-md relative clear-both">
+                                                    <div class="gap-x-sm relative flex w-full items-center" style="transform: none; transform-origin: 50% 50% 0px;">
+                                                        <div style="opacity: 1; transform: none; transform-origin: 50% 50% 0px;">
+                                                            <div class="group/source py-sm dark:bg-subtle dark:hover:bg-quiet isolate h-[32px] max-w-[160px] rounded-full border pl-2 duration-300 cursor-pointer border-subtlest ring-subtlest divide-subtlest transition duration-normal md:hover:!bg-subtle inline-flex items-center justify-between gap-sm">
+                                                                <div class="mr-sm flex items-center">
+                                                                    <div class="-mr-sm bg-base p-two z-[1] duration-150 border-subtlest ring-subtlest divide-subtlest bg-base rounded-full">
+                                                                        <div class="relative shrink-0 overflow-hidden rounded-full" style="width: 16px; height: 16px;">
+                                                                            <div class="rounded-inherit absolute inset-0 bg-white"></div>
+                                                                            <img class="relative block" alt="bernama.com favicon" width="16" height="16" src="https://www.google.com/s2/favicons?sz=128&amp;domain=bernama.com" style="width: 16px; height: 16px;">
+                                                                            <div class="rounded-inherit absolute inset-0 border border-[black]/10 dark:border-transparent"></div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="pr-4" style="mask-image: linear-gradient(to right, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 80%, rgba(0, 0, 0, 0) 95%);">
+                                                                    <div class="relative duration-150 group-hover/source:translate-x-[12px] font-sans text-xs font-medium text-quiet">5 sources</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR (outside article-main, should NOT be parsed) -->
+    <aside class="hidden @[860px]:block sticky top-[68px] h-fit">
+        <div class="space-y-md">
+            <div class="rounded-xl border border-subtlest p-md">
+                <div class="font-sans text-base font-medium text-foreground">Related Topics</div>
+                <div class="font-sans text-sm text-quiet">
+                    This sidebar content should not appear in parsed article output.
+                </div>
+                <ul>
+                    <li>Iran-US conflict</li>
+                    <li>Minab school airstrike</li>
+                    <li>International humanitarian law</li>
+                </ul>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Chrome mock + test utilities -->
+    <script type="module">
+        window.__sentMessages = [];
+        // Minimal chrome mock for parser tests (parser doesn't use chrome APIs, but page needs it)
+        window.chrome = window.chrome || {
+            runtime: {
+                getManifest: () => ({ name: 'Test' }),
+                sendMessage: (msg) => { window.__sentMessages.push(msg); },
+                onMessage: { addListener: () => {} }
+            },
+            storage: {
+                local: { _data: {}, get: async () => ({}), set: async () => {}, remove: async () => {}, clear: async () => {} },
+                onChanged: { _listeners: [], addListener: () => {} }
+            }
+        };
+        window.testUtilitiesReady = true;
+    </script>
+
+    <!-- Loads the PerplexityArticleParser and exposes it on window.__ArticleParser -->
+    <script type="module" src="build/article-shim.bundle.js"></script>
+</body>
+</html>
