@@ -1,4 +1,4 @@
-import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
+import { REXServiceWorkerModule, registerREXModule, dispatchEvent, type EventPayload } from '@bric/rex-core/service-worker'
 import rexCorePlugin from '@bric/rex-core/service-worker'
 import { type REXConfiguration } from '@bric/rex-core/extension'
 import * as listUtils from '@bric/rex-lists'
@@ -253,9 +253,8 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
       article: {
         headline: article.headline,
         posted: article.posted,
-        source: article.source,
         authors: article.authors || [],
-        'content*': article['content*'],
+        content: article.content,
         summary: article.summary,
         url: articleUrl,
         citations: article.citations,
@@ -263,7 +262,7 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
       data_source: 'extension_discover_capture',
     })
 
-    console.log(`[LLM Chatbot] Dispatched article to PDK: "${article.headline.substring(0, 50)}..." (${article['content*']?.length || 0} chars)`)
+    console.log(`[LLM Chatbot] Dispatched article to PDK: "${article.headline.substring(0, 50)}..." (${article.content?.length || 0} chars)`)
   }
 
   /**
@@ -766,7 +765,7 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
         // Mark as seen before dispatching
         PAGE_CAPTURE_SEEN.set(url, Date.now())
 
-        const event: Record<string, unknown> = {
+        const event: EventPayload = {
           name: 'page-capture',
           date: message.date ?? Date.now(),
           url,

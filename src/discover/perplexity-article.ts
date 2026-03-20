@@ -143,9 +143,8 @@ export class PerplexityArticleParser {
     const article: NewsArticle = {
       headline,
       posted,
-      source,
       authors: [],
-      'content*': content,
+      content,
       summary,
       url,
       citations: citations.length > 0 ? citations : undefined,

@@ -18,7 +18,7 @@ export class PerplexityFinanceParser {
     const h2s = document.querySelectorAll('h2')
     let marketSummaryH2: Element | null = null
 
-    for (const h2 of h2s) {
+    for (const h2 of Array.from(h2s)) {
       if (h2.textContent?.trim() === 'Market Summary') {
         marketSummaryH2 = h2
         break

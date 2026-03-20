@@ -868,8 +868,8 @@ class LLMChatbotBrowserModule extends REXClientModule {
       if (!article) return
 
       // Update captured article if content grew (progressive loading)
-      const currentContentLen = article['content*'].length
-      const previousContentLen = this.capturedArticle?.['content*']?.length || 0
+      const currentContentLen = article.content.length
+      const previousContentLen = this.capturedArticle?.content?.length || 0
 
       if (currentContentLen > previousContentLen) {
         this.capturedArticle = article
