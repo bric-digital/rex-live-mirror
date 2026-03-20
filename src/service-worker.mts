@@ -1,4 +1,7 @@
 import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
+import rexCorePlugin from '@bric/rex-core/service-worker'
+import { type REXConfiguration } from '@bric/rex-core/extension'
+import * as listUtils from '@bric/rex-lists'
 
 /**
  * LLM Chatbot Module - Service Worker Context
@@ -27,7 +30,8 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
     chrome.storage.local.get('REXConfiguration', (result) => {
       if (result.REXConfiguration) {
         const config = result.REXConfiguration
-        const llmConfig = config['llm_capture']
+        const liveMirrorConfig = config['live_mirror']
+        const llmConfig = liveMirrorConfig?.['llm_capture']
 
         if (llmConfig?.enabled) {
           this.enabled = true
@@ -101,6 +105,9 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
           })
         return true  // Async response
       }
+    } else if (message.messageType === 'pageCaptureContent') {
+      pageCaptureModule.handlePageCapture(message, sendResponse)
+      return true  // Async response
     }
     return false
   }
@@ -634,5 +641,172 @@ class ChatGPTCaptureManager {
 
 const llmChatbotModule = new LLMChatbotServiceWorkerModule()
 registerREXModule(llmChatbotModule)
+
+// ---------------------------------------------------------------------------
+// Page Capture Module
+// Captures the rendered HTML of pages matching domains in a named rex-lists
+// allow-list.  Config key: page_capture
+//
+// Example server config:
+//   "page_capture": {
+//     "enabled": true,
+//     "capture_delay_ms": 1500,
+//     "allow_lists": ["financial-news-sites"]
+//   }
+//
+// The named lists are populated via the top-level "lists" key in the server
+// config (same mechanism used by rex-history), e.g.:
+//   "lists": {
+//     "financial-news-sites": [
+//       { "pattern": "forbes.com",       "pattern_type": "domain", "source": "backend", "metadata": {} },
+//       { "pattern": "seekingalpha.com", "pattern_type": "domain", "source": "backend", "metadata": {} },
+//       { "pattern": "cnbc.com",         "pattern_type": "domain", "source": "backend", "metadata": {} },
+//       { "pattern": "bloomberg.com",    "pattern_type": "domain", "source": "backend", "metadata": {} },
+//       { "pattern": "marketwatch.com",  "pattern_type": "domain", "source": "backend", "metadata": {} },
+//       { "pattern": "barrons.com",      "pattern_type": "domain", "source": "backend", "metadata": {} }
+//     ]
+//   }
+// ---------------------------------------------------------------------------
+
+interface PageCaptureConfig {
+  enabled: boolean
+  capture_delay_ms?: number
+  capture_raw_html?: boolean
+  debug?: boolean
+  allow_lists: string[]
+  dedup_ttl_hours?: number
+}
+
+// Deduplication: track URL -> timestamp of last capture (in-memory, resets on SW restart)
+// This is intentional — after a SW restart the participant may have navigated to new content.
+const PAGE_CAPTURE_SEEN: Map<string, number> = new Map()
+const DEFAULT_DEDUP_TTL_MS = 24 * 60 * 60 * 1000  // 24 hours
+
+class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
+  private config: PageCaptureConfig | null = null
+
+  moduleName(): string {
+    return 'PageCaptureServiceWorkerModule'
+  }
+
+  setup(): void {
+    console.log('[rex-live-mirror/page-capture] Service Worker module initializing...')
+
+    listUtils.initializeListDatabase()
+      .then(() => {
+        console.log('[rex-live-mirror/page-capture] List database ready.')
+        return this.loadConfiguration(true)
+      })
+      .catch((err) => {
+        console.error('[rex-live-mirror/page-capture] Failed to initialize list database:', err)
+      })
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== 'local' || !changes.REXConfiguration) return
+      this.loadConfiguration(true).catch((err) => {
+        console.error('[rex-live-mirror/page-capture] Failed to reload configuration:', err)
+      })
+    })
+  }
+
+  private async loadConfiguration(syncLists: boolean): Promise<void> {
+    const configuration = await rexCorePlugin.fetchConfiguration() as REXConfiguration | undefined
+    const configRecord = configuration as unknown as Record<string, unknown> | undefined
+    const liveMirrorConfig = configRecord?.['live_mirror'] as Record<string, unknown> | undefined
+    const pageCaptureConfig = liveMirrorConfig?.['page_capture'] as PageCaptureConfig | undefined
+
+    if (pageCaptureConfig?.enabled) {
+      this.config = pageCaptureConfig
+      console.log('[rex-live-mirror/page-capture] Configuration loaded:', pageCaptureConfig)
+    } else {
+      this.config = null
+      console.log('[rex-live-mirror/page-capture] Disabled or not configured.')
+    }
+
+    if (!syncLists) return
+
+    const listConfig = configRecord?.['lists']
+    if (listConfig !== null && listConfig !== undefined && typeof listConfig === 'object' && !Array.isArray(listConfig)) {
+      await listUtils.parseAndSyncLists(listConfig as Parameters<typeof listUtils.parseAndSyncLists>[0])
+      console.log('[rex-live-mirror/page-capture] Lists synced.')
+    }
+  }
+
+  // Called by LLMChatbotServiceWorkerModule.handleMessage for pageCaptureContent messages.
+  handlePageCapture(message: any, sendResponse: (response: any) => void): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (!this.config?.enabled) {
+      sendResponse({ success: false, reason: 'page_capture disabled' })
+      return
+    }
+
+    const url: string = message.url || ''
+
+    // Deduplication: skip if we captured this exact URL recently
+    const dedupTtlMs = ((this.config.dedup_ttl_hours ?? 24) * 60 * 60 * 1000)
+    const lastSeen = PAGE_CAPTURE_SEEN.get(url)
+    if (lastSeen !== undefined && (Date.now() - lastSeen) < dedupTtlMs) {
+      console.log(`[rex-live-mirror/page-capture] Duplicate within TTL, skipping: ${url}`)
+      sendResponse({ success: false, reason: 'duplicate' })
+      return
+    }
+
+    const allowLists: string[] = this.config.allow_lists || []
+    const checks = allowLists.map(listName => listUtils.matchDomainAgainstList(url, listName))
+
+    Promise.all(checks)
+      .then((results) => {
+        const matchedEntry = results.find(r => r !== null) ?? null
+
+        if (!matchedEntry) {
+          console.log(`[rex-live-mirror/page-capture] URL not in allow-lists, skipping: ${url}`)
+          sendResponse({ success: false, reason: 'not in allow-lists' })
+          return
+        }
+
+        // Mark as seen before dispatching
+        PAGE_CAPTURE_SEEN.set(url, Date.now())
+
+        const event: Record<string, unknown> = {
+          name: 'page-capture',
+          date: message.date ?? Date.now(),
+          url,
+          domain: message.domain ?? '',
+          title: message.title ?? '',
+          byline: message.byline ?? null,
+          excerpt: message.excerpt ?? null,
+          published_time: message.published_time ?? null,
+          text_content: message.text_content ?? null,
+          text_length: message.text_length ?? 0,
+          parsed_content: message.parsed_content ?? null,
+          matched_list: matchedEntry.list_name,
+          matched_pattern: matchedEntry.pattern,
+          matched_category: matchedEntry.metadata?.category ?? null,
+        }
+
+        // Include raw HTML if the browser sent it (browser already applied debug/capture_raw_html)
+        if (message.html !== undefined) {
+          event.html = message.html
+          event.html_length = message.html_length ?? 0
+        }
+
+        dispatchEvent(event)
+
+        console.log(`[rex-live-mirror/page-capture] Dispatched: "${message.title}" (${message.text_length} chars${message.html !== undefined ? ', +raw html' : ''})`)
+        sendResponse({ success: true })
+      })
+      .catch((err) => {
+        console.error('[rex-live-mirror/page-capture] Error checking allow-lists:', err)
+        sendResponse({ success: false, reason: String(err) })
+      })
+  }
+
+  // Not used directly — messages are routed via LLMChatbotServiceWorkerModule
+  handleMessage(_message: any, _sender: any, _sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+    return false
+  }
+}
+
+export const pageCaptureModule = new PageCaptureServiceWorkerModule()
+registerREXModule(pageCaptureModule)
 
 export default llmChatbotModule

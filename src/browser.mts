@@ -1,4 +1,5 @@
 import { REXClientModule, registerREXModule } from '@bric/rex-core/browser'
+import { Readability } from '@mozilla/readability'
 import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
@@ -39,6 +40,7 @@ interface CapturedInteractionInfo {
 
 class LLMChatbotBrowserModule extends REXClientModule {
   private enabled: boolean = false
+  private configurationApplied: boolean = false
   private parser: any = null
   private mutationObserver: MutationObserver | null = null
   private interactions: LLMInteraction[] = []
@@ -81,70 +83,90 @@ class LLMChatbotBrowserModule extends REXClientModule {
 
     // Get configuration from storage
     chrome.storage.local.get('REXConfiguration', (result) => {
-      try {
-        if (result.REXConfiguration) {
-          const config = result.REXConfiguration
-          const llmConfig = config['llm_capture']
-          const newsConfig = config['news_capture']
-
-          console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
-
-          // Check if this is a Finance, Discover, or article page BEFORE checking for chatbot
-          const currentURL = window.location.href
-
-          // Finance page: /finance
-          if (newsConfig?.enabled && currentURL.includes('perplexity.ai/finance')) {
-            const enabledSources = newsConfig.sources || []
-            if (enabledSources.includes('perplexity-finance')) {
-              console.log('[LLM Chatbot Browser] Finance page detected, initializing finance capture')
-              this.enabled = true
-              this.initializeFinanceCapture()
-              return
-            }
-          }
-
-          if (newsConfig?.enabled && currentURL.includes('perplexity.ai/discover')) {
-            const enabledSources = newsConfig.sources || []
-            if (enabledSources.includes('perplexity-discover')) {
-              const discoverConfig = newsConfig.platforms?.perplexity_discover || {}
-
-              // Article page: /discover/you/SLUG
-              if (currentURL.match(/perplexity\.ai\/discover\/you\/.+/)) {
-                console.log('[LLM Chatbot Browser] Discover article page detected, initializing article capture')
-                this.enabled = true
-                this.initializeArticleCapture(discoverConfig)
-                return
-              }
-
-              // Discover feed page: /discover (no /you/)
-              console.log('[LLM Chatbot Browser] Discover feed page detected, initializing news capture')
-              this.enabled = true
-              this.initializeDiscoverCapture(discoverConfig)
-              return  // Don't also initialize chatbot capture
-            }
-          }
-
-          if (llmConfig?.enabled) {
-            this.enabled = true
-            this.batchSize = llmConfig.batch_size || 10
-            this.transmissionInterval = llmConfig.transmission_interval_ms || 60000
-
-            console.log('[LLM Chatbot Browser] Module enabled')
-            console.log('[LLM Chatbot Browser] Batch size:', this.batchSize)
-            console.log('[LLM Chatbot Browser] Transmission interval:', this.transmissionInterval, 'ms')
-
-            // Determine which chatbot we're on
-            this.initializeChatbotCapture(llmConfig)
-          } else {
-            console.log('[LLM Chatbot Browser] Module disabled in configuration')
-          }
-        } else {
-          console.warn('[LLM Chatbot Browser] No configuration found')
-        }
-      } catch (error) {
-        console.error('[LLM Chatbot Browser] Error loading configuration:', error)
+      if (result.REXConfiguration) {
+        this.applyConfiguration(result.REXConfiguration)
+      } else {
+        console.warn('[LLM Chatbot Browser] No configuration found on setup — will retry on storage change')
       }
     })
+
+    // Retry if config arrives after this script runs (race with service worker init)
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== 'local' || !changes.REXConfiguration) return
+      if (this.configurationApplied) return
+      const config = changes.REXConfiguration.newValue
+      if (config) {
+        console.log('[LLM Chatbot Browser] Configuration arrived via storage change — applying now')
+        this.applyConfiguration(config)
+      }
+    })
+  }
+
+  private applyConfiguration(config: any): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    try {
+      const liveMirrorConfig = config['live_mirror']
+      const llmConfig = liveMirrorConfig?.['llm_capture']
+      const pageCaptureConfig = liveMirrorConfig?.['page_capture']
+
+      console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
+
+      // Check if this is a Finance, Discover, or article page BEFORE checking for chatbot
+      const currentURL = window.location.href
+      let specializedPageInitialized = false
+
+      // Finance page: /finance
+      if (pageCaptureConfig?.enabled && currentURL.includes('perplexity.ai/finance')) {
+        const financeConfig = pageCaptureConfig.perplexity_finance || {}
+        if (financeConfig.enabled !== false) {
+          console.log('[LLM Chatbot Browser] Finance page detected, initializing finance capture')
+          this.enabled = true
+          this.initializeFinanceCapture()
+          specializedPageInitialized = true
+        }
+      }
+
+      if (pageCaptureConfig?.enabled && currentURL.includes('perplexity.ai/discover')) {
+        const discoverConfig = pageCaptureConfig.perplexity_discover || {}
+        if (discoverConfig.enabled !== false) {
+          // Article page: /discover/you/SLUG
+          if (currentURL.match(/perplexity\.ai\/discover\/you\/.+/)) {
+            console.log('[LLM Chatbot Browser] Discover article page detected, initializing article capture')
+            this.enabled = true
+            this.initializeArticleCapture(pageCaptureConfig.perplexity_article || discoverConfig)
+          } else {
+            // Discover feed page: /discover (no /you/)
+            console.log('[LLM Chatbot Browser] Discover feed page detected, initializing news capture')
+            this.enabled = true
+            this.initializeDiscoverCapture(discoverConfig)
+          }
+          specializedPageInitialized = true
+        }
+      }
+
+      if (!specializedPageInitialized) {
+        if (llmConfig?.enabled) {
+          this.enabled = true
+          this.batchSize = llmConfig.batch_size || 10
+          this.transmissionInterval = llmConfig.transmission_interval_ms || 60000
+
+          console.log('[LLM Chatbot Browser] Module enabled')
+          console.log('[LLM Chatbot Browser] Batch size:', this.batchSize)
+          console.log('[LLM Chatbot Browser] Transmission interval:', this.transmissionInterval, 'ms')
+
+          // Determine which chatbot we're on
+          this.initializeChatbotCapture(llmConfig)
+        } else {
+          console.log('[LLM Chatbot Browser] Module disabled in configuration')
+        }
+      }
+
+      if (pageCaptureConfig?.enabled) {
+        this.configurationApplied = true
+        this.initializePageCapture(pageCaptureConfig)
+      }
+    } catch (error) {
+      console.error('[LLM Chatbot Browser] Error loading configuration:', error)
+    }
   }
 
   private initializeChatbotCapture(llmConfig: any): void {
@@ -201,6 +223,67 @@ class LLMChatbotBrowserModule extends REXClientModule {
     } catch (error) {
       console.error('[LLM Chatbot Browser] Error initializing chatbot capture:', error)
     }
+  }
+
+  private initializePageCapture(pageCaptureConfig: any): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const delayMs: number = pageCaptureConfig.capture_delay_ms ?? 1500
+    const includeRawHtml: boolean = pageCaptureConfig.debug === true || pageCaptureConfig.capture_raw_html === true
+
+    const sendCapture = () => {
+      const now = Date.now()
+      const url = window.location.href
+      const domain = window.location.hostname
+
+      // Always run Readability — clone so we don't mutate the live DOM
+      let parsed: ReturnType<Readability['parse']> = null
+      try {
+        const docClone = document.cloneNode(true) as Document
+        parsed = new Readability(docClone).parse()
+      } catch (err) {
+        console.warn('[rex-live-mirror/page-capture] Readability parse failed:', err)
+      }
+
+      const message: Record<string, unknown> = {
+        messageType: 'pageCaptureContent',
+        date: now,
+        url,
+        domain,
+        title: parsed?.title ?? document.title,
+        byline: parsed?.byline ?? null,
+        excerpt: parsed?.excerpt ?? null,
+        published_time: parsed?.publishedTime ?? null,
+        text_content: parsed?.textContent ?? null,
+        text_length: parsed?.length ?? 0,
+        parsed_content: parsed?.content ?? null,
+      }
+
+      if (includeRawHtml) {
+        const html = document.documentElement.outerHTML
+        message.html = html
+        message.html_length = html.length
+      }
+
+      chrome.runtime.sendMessage(message)
+        .then((response) => {
+          if (response?.success) {
+            console.log(`[rex-live-mirror/page-capture] Captured: ${domain} — "${message.title}" (${message.text_length} chars${includeRawHtml ? ', +raw html' : ''})`)
+          } else {
+            console.log(`[rex-live-mirror/page-capture] Not captured: ${response?.reason}`)
+          }
+        })
+        .catch((err) => {
+          console.warn('[rex-live-mirror/page-capture] Failed to send capture to service worker:', err)
+        })
+    }
+
+    // Wait for the page to fully render before capturing
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(sendCapture, delayMs)
+    } else {
+      window.addEventListener('load', () => setTimeout(sendCapture, delayMs))
+    }
+
+    console.log(`[rex-live-mirror/page-capture] Initialized (delay: ${delayMs}ms, raw_html: ${includeRawHtml})`)
   }
 
   private startCapture(): void {

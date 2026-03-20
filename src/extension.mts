@@ -31,20 +31,21 @@ class LLMChatbotExtensionModule extends REXExtensionModule {
       try {
         if (result.REXConfiguration) {
           const config = result.REXConfiguration
-          const llmConfig = config['llm_capture']
-          const newsConfig = config['news_capture']
+          const liveMirrorConfig = config['live_mirror']
+          const llmConfig = liveMirrorConfig?.['llm_capture']
+          const pageCaptureConfig = liveMirrorConfig?.['page_capture']
 
           console.log('[LLM Chatbot Extension] Configuration loaded:', llmConfig)
 
-          // Enable if either llm_capture or news_capture is enabled
-          if (llmConfig?.enabled || newsConfig?.enabled) {
+          // Enable if either llm_capture or page_capture is enabled
+          if (llmConfig?.enabled || pageCaptureConfig?.enabled) {
             this.enabled = true
             console.log('[LLM Chatbot Extension] Module enabled via configuration')
             if (llmConfig?.enabled) {
               console.log('[LLM Chatbot Extension] LLM capture sources:', llmConfig.sources)
             }
-            if (newsConfig?.enabled) {
-              console.log('[LLM Chatbot Extension] News capture sources:', newsConfig.sources)
+            if (pageCaptureConfig?.enabled) {
+              console.log('[LLM Chatbot Extension] Page capture allow-lists:', pageCaptureConfig.allow_lists)
             }
 
             this.initializeUI()

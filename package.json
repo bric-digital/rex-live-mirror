@@ -49,6 +49,8 @@
   },
   "dependencies": {
     "@bric/rex-core": "github:bric-digital/rex-core#main",
-    "@bric/rex-types": "github:bric-digital/rex-types#main"
+    "@bric/rex-lists": "github:bric-digital/rex-lists#main",
+    "@bric/rex-types": "github:bric-digital/rex-types#main",
+    "@mozilla/readability": "^0.5.0"
   }
 }
