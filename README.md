@@ -1,10 +1,10 @@
-# webmunk-live-mirror
+# rex-live-mirror
 
-BRIC module for capturing Q&A pairs, sources, and interactions from LLM chatbot platforms in real-time.
+BRIC module for capturing Q&A pairs, sources, and interactions from LLM chatbot platforms in real-time, and extracting news from discovery feeds.
 
 ## Overview
 
-**webmunk-live-mirror** detects user questions and AI responses across multiple chatbot platforms, automatically extracting:
+**rex-live-mirror** detects user questions and AI responses across multiple chatbot platforms, automatically extracting:
 - **Question & Response pairs** - Full text capture with transaction tracking
 - **Citation sources** - Backend-configurable selector support with cross-question deduplication
 - **Metadata** - Timestamps, URLs, login state, and platform identification
@@ -32,7 +32,7 @@ BRIC module for capturing Q&A pairs, sources, and interactions from LLM chatbot 
 
 ## Integration with Other BRIC Modules
 
-**webmunk-live-mirror** is part of the **webmunk** BRIC ecosystem:
+**rex-live-mirror** is part of the **REX** BRIC ecosystem:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -54,7 +54,7 @@ BRIC module for capturing Q&A pairs, sources, and interactions from LLM chatbot 
 ```
 
 **Data Flow**:
-1. **webmunk-live-mirror** detects Q&A + sources on chatbot pages
+1. **rex-live-mirror** detects Q&A + sources on chatbot pages
 2. Formats transaction with metadata
 3. Sends via `chrome.runtime.sendMessage` to **webmunk-core**
 4. **webmunk-passive-data-kit** handles batch transmission to PDK server
@@ -167,7 +167,7 @@ Add to your extension's `package.json` dependencies:
 ```json
 {
   "dependencies": {
-    "@bric/webmunk-live-mirror": "github:bric-digital/webmunk-live-mirror#main"
+    "@bric/rex-live-mirror": "github:bric-digital/rex-live-mirror#main"
   }
 }
 ```

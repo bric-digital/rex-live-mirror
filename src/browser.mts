@@ -1,4 +1,5 @@
 import { REXClientModule, registerREXModule } from '@bric/rex-core/browser'
+import { Readability } from '@mozilla/readability'
 import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
@@ -71,7 +72,7 @@ class LLMChatbotBrowserModule extends REXClientModule {
       try {
         if (result.REXConfiguration) {
           const config = result.REXConfiguration
-          const llmConfig = config['llm_capture']
+          const llmConfig = config['live_mirror']?.['llm_capture'] ?? config['llm_capture']
 
           console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
 
@@ -555,12 +556,13 @@ registerREXModule(llmChatbotModule)
 console.log('[LLM Chatbot Browser] Module registered and ready')
 
 /**
- * Discover & Finance Capture Module - Browser Context
- * Runs on Perplexity Discover feed, article, and Finance pages.
- * Extracts structured data and sends it to the service worker.
+ * Page Capture Module - Browser Context
+ * Runs on Perplexity Discover feed, article, and Finance pages (specialized parsers),
+ * and on any other allowed domain (generic Readability-based capture).
  */
 class DiscoverCaptureBrowserModule extends REXClientModule {
   private enabled: boolean = false
+  private pageCaptureConfig: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
   private sources: string[] = []
   private transmittedHeadlines: Set<string> = new Set()
   private lastArticleUrl: string = ''
@@ -573,16 +575,18 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   setup(): void {
     chrome.storage.local.get('REXConfiguration', (result) => {
       const config = result.REXConfiguration
-      const newsCaptureConfig = config?.['news_capture']
+      // Support both nested (live_mirror.page_capture) and flat (page_capture) config keys
+      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
 
-      if (!newsCaptureConfig?.enabled) {
-        console.log('[Discover Capture] news_capture not enabled, skipping')
+      if (!pageCaptureConfig?.enabled) {
+        console.log('[Page Capture] page_capture not enabled, skipping')
         return
       }
 
       this.enabled = true
-      this.sources = newsCaptureConfig.sources ?? []
-      console.log('[Discover Capture] Enabled. Sources:', this.sources)
+      this.pageCaptureConfig = pageCaptureConfig
+      this.sources = pageCaptureConfig.sources ?? []
+      console.log('[Page Capture] Enabled. Sources:', this.sources)
 
       this.initializeCapture()
     })
@@ -593,26 +597,84 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
 
     // Article pages: /discover/you/<slug> — check BEFORE the feed pattern
     if (this.sources.includes('perplexity-discover') && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
-      console.log('[Discover Capture] Article page detected')
+      console.log('[Page Capture] Perplexity article page detected')
       this.startArticleCapture()
       return
     }
 
     // Discover feed: /discover (but not /discover/you/...)
     if (this.sources.includes('perplexity-discover') && url.includes('perplexity.ai/discover')) {
-      console.log('[Discover Capture] Discover feed detected')
+      console.log('[Page Capture] Perplexity Discover feed detected')
       this.startDiscoverCapture()
       return
     }
 
     // Finance page
     if (this.sources.includes('perplexity-finance') && url.includes('perplexity.ai/finance')) {
-      console.log('[Discover Capture] Finance page detected')
+      console.log('[Page Capture] Perplexity Finance page detected')
       this.startFinanceCapture()
       return
     }
 
-    console.log('[Discover Capture] URL does not match any capture target:', url)
+    // Generic Readability-based capture — browser context sends domain; service worker filters by allow_lists
+    console.log('[Page Capture] Using generic Readability capture for:', url)
+    this.initializePageCapture(this.pageCaptureConfig)
+  }
+
+  private initializePageCapture(pageCaptureConfig: any): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const delayMs: number = pageCaptureConfig.capture_delay_ms ?? 1500
+    const includeRawHtml: boolean = pageCaptureConfig.debug === true || pageCaptureConfig.capture_raw_html === true
+
+    const sendCapture = () => {
+      const now = Date.now()
+      const url = window.location.href
+      const domain = window.location.hostname
+
+      let parsed: ReturnType<Readability['parse']> = null
+      try {
+        const docClone = document.cloneNode(true) as Document
+        parsed = new Readability(docClone).parse()
+      } catch (err) {
+        console.warn('[Page Capture] Readability parse failed:', err)
+      }
+
+      const message: Record<string, unknown> = {
+        messageType: 'pageCaptureContent',
+        date: now,
+        url,
+        domain,
+        title: parsed?.title ?? document.title,
+        byline: parsed?.byline ?? null,
+        excerpt: parsed?.excerpt ?? null,
+        published_time: parsed?.publishedTime ?? null,
+        text_content: parsed?.textContent ?? null,
+        text_length: parsed?.length ?? 0,
+        parsed_content: parsed?.content ?? null,
+      }
+
+      if (includeRawHtml) {
+        message.html = document.documentElement.outerHTML
+        message.html_length = (message.html as string).length
+      }
+
+      chrome.runtime.sendMessage(message)
+        .then(response => {
+          if (response?.success) {
+            console.log('[Page Capture] Content captured:', domain)
+          } else {
+            console.log('[Page Capture] Content skipped (filtered or duplicate):', domain)
+          }
+        })
+        .catch(err => {
+          console.warn('[Page Capture] Failed to send capture message:', err)
+        })
+    }
+
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      setTimeout(sendCapture, delayMs)
+    } else {
+      window.addEventListener('load', () => setTimeout(sendCapture, delayMs))
+    }
   }
 
   private startDiscoverCapture(): void {

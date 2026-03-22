@@ -1,4 +1,5 @@
 import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
+import * as listUtils from '@bric/rex-lists'
 
 /**
  * LLM Chatbot Module - Service Worker Context
@@ -581,5 +582,104 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
 
 const discoverCaptureModule = new DiscoverCaptureServiceWorkerModule()
 registerREXModule(discoverCaptureModule)
+
+/**
+ * Page Capture Module - Service Worker Context
+ * Receives pageCaptureContent messages from browser context,
+ * filters by allow_lists, deduplicates, and dispatches page-capture events.
+ */
+const PAGE_CAPTURE_SEEN: Map<string, number> = new Map()
+const PAGE_CAPTURE_DEDUPE_MS = 60 * 60 * 1000 // 1 hour
+
+class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
+  private enabled: boolean = false
+  private allowLists: string[] = []
+  private listDatabase: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  moduleName(): string {
+    return 'PageCaptureServiceWorkerModule'
+  }
+
+  setup(): void {
+    console.log('[Page Capture] Service Worker module initializing...')
+    this.loadConfiguration()
+  }
+
+  private loadConfiguration(): void {
+    chrome.storage.local.get('REXConfiguration', (result) => {
+      const config = result.REXConfiguration
+      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
+
+      if (!pageCaptureConfig?.enabled) {
+        console.log('[Page Capture] page_capture not enabled')
+        return
+      }
+
+      this.enabled = true
+      this.allowLists = pageCaptureConfig.allow_lists ?? []
+      console.log('[Page Capture] Service Worker enabled. Allow lists:', this.allowLists)
+
+      if (this.allowLists.length > 0) {
+        listUtils.initializeListDatabase(this.allowLists)
+          .then(db => { this.listDatabase = db })
+          .catch(err => console.warn('[Page Capture] Failed to initialize list database:', err))
+      }
+    })
+  }
+
+  handleMessage(message: any, sender: any, sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (message.messageType !== 'pageCaptureContent') return false
+
+    if (!this.enabled) {
+      sendResponse({ success: false, reason: 'disabled' })
+      return true
+    }
+
+    const url: string = message.url ?? ''
+    const domain: string = message.domain ?? ''
+
+    // Check allow_lists if configured
+    if (this.allowLists.length > 0 && this.listDatabase) {
+      const allowed = listUtils.matchDomainAgainstList(domain, this.listDatabase)
+      if (!allowed) {
+        console.log('[Page Capture] Domain not in allow list, skipping:', domain)
+        sendResponse({ success: false, reason: 'not-allowed' })
+        return true
+      }
+    }
+
+    // Deduplicate by URL within the dedupe window
+    const now = Date.now()
+    const lastSeen = PAGE_CAPTURE_SEEN.get(url)
+    if (lastSeen !== undefined && now - lastSeen < PAGE_CAPTURE_DEDUPE_MS) {
+      console.log('[Page Capture] Duplicate URL within dedupe window, skipping:', url)
+      sendResponse({ success: false, reason: 'duplicate' })
+      return true
+    }
+    PAGE_CAPTURE_SEEN.set(url, now)
+
+    dispatchEvent({
+      name: 'page-capture',
+      data_source: 'extension_page_capture',
+      domain,
+      url,
+      date: message.date,
+      title: message.title,
+      byline: message.byline,
+      excerpt: message.excerpt,
+      published_time: message.published_time,
+      text_content: message.text_content,
+      text_length: message.text_length,
+      parsed_content: message.parsed_content,
+      ...(message.html !== undefined ? { html: message.html, html_length: message.html_length } : {}),
+    })
+
+    sendResponse({ success: true })
+    return true
+  }
+}
+
+const pageCaptureModule = new PageCaptureServiceWorkerModule()
+registerREXModule(pageCaptureModule)
 
 export default llmChatbotModule
