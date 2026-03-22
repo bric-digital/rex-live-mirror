@@ -1,0 +1,119 @@
+{
+  "selectorCandidates": {
+    "a[href*=\"/page/\"]": 0,
+    "a[href*=\"/discover/\"]": 0,
+    "[data-testid*=\"card\"]": 0,
+    "[data-testid*=\"story\"]": 0,
+    "[data-testid*=\"article\"]": 0,
+    "[data-testid*=\"news\"]": 0,
+    "[data-testid*=\"discover\"]": 1,
+    "[data-testid*=\"feed\"]": 0,
+    "[class*=\"card\"]": 0,
+    "[class*=\"Card\"]": 0,
+    "[class*=\"story\"]": 0,
+    "[class*=\"Story\"]": 0,
+    "[class*=\"article\"]": 0,
+    "[class*=\"Article\"]": 0,
+    "[class*=\"discover\"]": 0,
+    "[class*=\"feed\"]": 0,
+    "[class*=\"Feed\"]": 0,
+    "article": 0,
+    "h2": 0,
+    "h3": 0,
+    "[class*=\"col-span\"]": 1,
+    "[class*=\"grid\"]": 17,
+    "[class*=\"sidebar\"]": 3,
+    "[class*=\"main\"]": 1,
+    "img[src*=\"favicon\"]": 0,
+    "img[src*=\"logo\"]": 0,
+    "img[alt]": 1,
+    "time": 0,
+    "[class*=\"time\"]": 0,
+    "[class*=\"ago\"]": 0,
+    "[class*=\"date\"]": 0
+  },
+  "pageLinkHtml": [],
+  "discoverLinkInfo": [],
+  "bodyChildren": [
+    {
+      "tag": "DIV",
+      "id": "root",
+      "classes": "",
+      "childCount": 2
+    },
+    {
+      "tag": "IMG",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "SCRIPT",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "IFRAME",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "IFRAME",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "SCRIPT",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "DIV",
+      "id": "pplx-icon-sprites",
+      "classes": "",
+      "childCount": 1
+    },
+    {
+      "tag": "DIV",
+      "id": "pplx-logo-sprites",
+      "classes": "",
+      "childCount": 1
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "classes": "fixed inset-y-0 right-0 flex h-full w-[60vw] min-w-0 flex-1 flex-col text-clip pointer-events-none w-0 translate-x-full opacity-0 duration-normal transition-transform ease-in-out",
+      "childCount": 2
+    },
+    {
+      "tag": "SCRIPT",
+      "id": "google-identity-services-script",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    },
+    {
+      "tag": "DIV",
+      "id": "",
+      "classes": "",
+      "childCount": 0
+    }
+  ],
+  "mainInfo": {
+    "tag": "MAIN",
+    "classes": "erp-tab:p-0 erp-tab:gap-0 isolate flex h-auto max-h-screen min-w-0 grow flex-col",
+    "childCount": 1,
+    "firstChildClasses": "@container/main relative isolate min-h-0 flex-1 overflow-clip bg-clip-border border-subtlest ring-subtlest divide-subtlest bg-base"
+  },
+  "title": "Perplexity Discover",
+  "url": "https://www.perplexity.ai/discover"
+}

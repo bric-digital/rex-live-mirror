@@ -5,3 +5,11 @@ dist/
 *.d.ts
 *.d.ts.map
 .DS_Store
+
+# Test artifacts
+tests/src/build/
+tests/extension/
+playwright-report/
+test-results/
+.perplexity-profile/
+*-profile/

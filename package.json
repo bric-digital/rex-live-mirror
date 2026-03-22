@@ -24,11 +24,20 @@
     "./chatbots/perplexity": "./src/chatbots/perplexity.ts"
   },
   "scripts": {
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "pretest": "node tests/scripts/build-test-bundle.js",
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=dot",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.48.0",
     "@types/chrome": "^0.0.275",
+    "@types/node": "^24.10.0",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.0",
     "jiti": "^2.6.1",
     "typescript": "^5.3.3",

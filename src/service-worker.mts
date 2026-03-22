@@ -512,4 +512,74 @@ class ChatGPTCaptureManager {
 const llmChatbotModule = new LLMChatbotServiceWorkerModule()
 registerREXModule(llmChatbotModule)
 
+/**
+ * Discover & Finance Capture Module - Service Worker Context
+ * Handles discoverNewsBatch, discoverArticleBatch, and financeMarketSources messages
+ * from the browser context and dispatches events to PDK.
+ */
+class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
+  private transmittedHeadlines: Set<string> = new Set()
+
+  moduleName(): string {
+    return 'DiscoverCaptureServiceWorkerModule'
+  }
+
+  setup(): void {
+    console.log('[Discover Capture] Service Worker module initializing...')
+  }
+
+  handleMessage(message: any, sender: any, sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (message.messageType === 'discoverNewsBatch') {
+      const blurbs: any[] = message.blurbs ?? [] // eslint-disable-line @typescript-eslint/no-explicit-any
+      for (const blurb of blurbs) {
+        const headline = blurb.headline as string
+        if (!headline || this.transmittedHeadlines.has(headline)) continue
+        this.transmittedHeadlines.add(headline)
+        dispatchEvent({
+          name: 'perplexity-discover-news',
+          platform: 'perplexity-discover',
+          data_source: 'extension_discover_capture',
+          blurb,
+        })
+      }
+      sendResponse({ success: true })
+      return true
+    }
+
+    if (message.messageType === 'discoverArticleBatch') {
+      const article = message.article
+      if (article) {
+        dispatchEvent({
+          name: 'perplexity-discover-article',
+          platform: 'perplexity-article',
+          data_source: 'extension_discover_capture',
+          article,
+        })
+      }
+      sendResponse({ success: true })
+      return true
+    }
+
+    if (message.messageType === 'financeMarketSources') {
+      const domains: string[] = message.domains ?? []
+      if (domains.length > 0) {
+        dispatchEvent({
+          name: 'perplexity-finance-sources',
+          platform: 'perplexity-finance',
+          data_source: 'extension_finance_capture',
+          domains,
+          url: message.url,
+        })
+      }
+      sendResponse({ success: true })
+      return true
+    }
+
+    return false
+  }
+}
+
+const discoverCaptureModule = new DiscoverCaptureServiceWorkerModule()
+registerREXModule(discoverCaptureModule)
+
 export default llmChatbotModule

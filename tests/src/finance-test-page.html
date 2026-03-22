@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Finance Mock Page</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; }
+    </style>
+</head>
+<body>
+    <!--
+      Mock DOM structure replicating the Market Summary section from the real
+      Perplexity Finance page. Used by finance-parser.spec.ts for unit testing.
+      Based on the actual rendered DOM captured from finance_rendered.html.
+    -->
+
+    <!-- ========== MARKET SUMMARY SECTION ========== -->
+    <div class="border-subtlest ring-subtlest divide-subtlest">
+        <div class="px-sm md:px-md min-h-8 pb-xs flex flex-wrap items-center justify-between gap-sm">
+            <h2 class="my-0 font-sans text-sm font-medium text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                Market Summary</h2>
+            <div class="flex items-center">
+                <div class="font-sans text-xs font-medium text-quieter selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                    Updated 5 minutes ago</div>
+            </div>
+        </div>
+        <div class="relative border rounded-xl mt-0 border-subtlest ring-subtlest divide-subtlest bg-raised">
+            <div class="rounded-inherit border-subtlest ring-subtlest divide-subtlest">
+                <div class="flex flex-col">
+                    <!-- Accordion item 1 -->
+                    <button class="relative w-full cursor-pointer appearance-none interactable rounded-t-xl pt-px border-subtlest ring-subtlest divide-subtlest transition duration-normal md:hover:!bg-subtle flex flex-col"
+                            aria-expanded="true">
+                        <div class="px-md py-sm w-full border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                            <div class="pr-md font-sans text-sm text-foreground select-none text-start selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                Crude Oil Surges to Multi-Year Highs on Iran War Supply Disruption
+                            </div>
+                        </div>
+                        <div class="px-md pt-0 pb-sm border-subtlest ring-subtlest divide-subtlest">
+                            <div class="font-sans text-sm text-quiet text-start selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                Oil prices exploded higher, with Crude Oil jumping 13.60% to $103.26.</div>
+                        </div>
+                    </button>
+                    <!-- Accordion item 2 -->
+                    <button class="relative w-full cursor-pointer appearance-none interactable border-subtlest border-t border-subtlest ring-subtlest divide-subtlest transition duration-normal md:hover:!bg-subtle flex flex-col"
+                            aria-expanded="false">
+                        <div class="px-md py-sm w-full border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                            <div class="pr-md font-sans text-sm text-foreground select-none text-start selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                U.S. Dollar Rallies as Safe-Haven Demand Intensifies</div>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Sources button with favicons -->
+                <div class="pt-sm translate-x-[-5px] border-subtlest ring-subtlest divide-subtlest p-md">
+                    <div class="rounded-full">
+                        <button type="button" class="reset interactable select-none outline-none font-semimedium transition-[background-color,border-color,transform,color,opacity] duration-300 ease-out font-sans text-center items-center justify-center leading-loose whitespace-nowrap text-foreground border border-solid border-subtle h-6 text-xs cursor-pointer inline-flex rounded-full hover:bg-subtle hover:border-subtle px-2 relative">
+                            <span class="text-box-trim-both" style="opacity: 1; transition: opacity 150ms 150ms;">
+                                <div class="text-quiet font-normal gap-x-sm flex flex-row -ml-0.5">
+                                    <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                        <div class="ml-xs flex">
+                                            <!-- Favicon: dailyforex.com -->
+                                            <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]" style="width: 14px; height: 14px;">
+                                                <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full" style="width: 14px; height: 14px;">
+                                                    <img class="relative block" alt="dailyforex.com favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=dailyforex.com" style="width: 14px; height: 14px;">
+                                                </div>
+                                            </div>
+                                            <!-- Favicon: paybis.com -->
+                                            <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]" style="width: 14px; height: 14px;">
+                                                <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full" style="width: 14px; height: 14px;">
+                                                    <img class="relative block" alt="paybis.com favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=paybis.com" style="width: 14px; height: 14px;">
+                                                </div>
+                                            </div>
+                                            <!-- Favicon: investing.com -->
+                                            <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]" style="width: 14px; height: 14px;">
+                                                <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full" style="width: 14px; height: 14px;">
+                                                    <img class="relative block" alt="investing.com favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=investing.com" style="width: 14px; height: 14px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>41 sources
+                                </div>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== RECENT DEVELOPMENTS SECTION (should NOT be parsed) ========== -->
+    <div class="border-subtlest ring-subtlest divide-subtlest" style="margin-top: 20px;">
+        <div class="px-sm md:px-md min-h-8 pb-xs flex flex-wrap items-center justify-between gap-sm">
+            <h2 class="my-0 font-sans text-sm font-medium text-foreground">
+                Recent Developments</h2>
+        </div>
+        <div class="relative border rounded-xl mt-0 border-subtlest ring-subtlest divide-subtlest bg-raised">
+            <div class="rounded-inherit border-subtlest ring-subtlest divide-subtlest">
+                <div class="pt-sm p-md">
+                    <button type="button" class="inline-flex rounded-full px-2">
+                        <span>
+                            <div class="flex">
+                                <div class="flex">
+                                    <div class="inline-flex rounded-full" style="width: 14px; height: 14px;">
+                                        <div class="rounded-full" style="width: 14px; height: 14px;">
+                                            <img class="relative block" alt="sharecafe.com.au favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=sharecafe.com.au">
+                                        </div>
+                                    </div>
+                                    <div class="inline-flex rounded-full" style="width: 14px; height: 14px;">
+                                        <div class="rounded-full" style="width: 14px; height: 14px;">
+                                            <img class="relative block" alt="atb.com favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=atb.com">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>5 sources
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chrome mock + test utilities -->
+    <script type="module">
+        window.__sentMessages = [];
+        window.chrome = window.chrome || {
+            runtime: {
+                getManifest: () => ({ name: 'Test' }),
+                sendMessage: (msg) => { window.__sentMessages.push(msg); },
+                onMessage: { addListener: () => {} }
+            },
+            storage: {
+                local: { _data: {}, get: async () => ({}), set: async () => {}, remove: async () => {}, clear: async () => {} },
+                onChanged: { _listeners: [], addListener: () => {} }
+            }
+        };
+        window.testUtilitiesReady = true;
+    </script>
+
+    <!-- Loads the PerplexityFinanceParser and exposes it on window.__FinanceParser -->
+    <script type="module" src="build/finance-shim.bundle.js"></script>
+</body>
+</html>

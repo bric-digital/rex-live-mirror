@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REX Live Mirror Test Page</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+        }
+        .ready {
+            background-color: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>REX Live Mirror Test Page</h1>
+    <div id="status">Loading test utilities...</div>
+
+    <!--
+      Script order matters: ESM module scripts are deferred and run in document order.
+      1. Chrome mock (inline) - must run first so chrome APIs exist when the module loads.
+      2. test-shim.bundle.js - loads the real modules and EventCaptureModule.
+    -->
+    <script type="module">
+        // Capture all messages sent via chrome.runtime.sendMessage
+        window.__sentMessages = [];
+
+        // Create mock Chrome APIs for testing
+        window.chrome = {
+            runtime: {
+                getManifest: () => ({ name: 'REX Live Mirror Test Extension' }),
+                sendMessage: (message, callback) => {
+                    window.__sentMessages.push(message);
+                    if (callback) {
+                        callback({ success: true });
+                    }
+                    return Promise.resolve({ success: true });
+                },
+                lastError: null,
+                onMessage: {
+                    _listeners: [],
+                    addListener: (callback) => {
+                        window.chrome.runtime.onMessage._listeners =
+                            window.chrome.runtime.onMessage._listeners || [];
+                        window.chrome.runtime.onMessage._listeners.push(callback);
+                    }
+                }
+            },
+            storage: {
+                local: {
+                    _data: {},
+                    get: async (keys) => {
+                        if (typeof keys === 'string') {
+                            return { [keys]: window.chrome.storage.local._data[keys] };
+                        }
+                        if (Array.isArray(keys)) {
+                            const result = {};
+                            keys.forEach(key => {
+                                if (window.chrome.storage.local._data[key] !== undefined) {
+                                    result[key] = window.chrome.storage.local._data[key];
+                                }
+                            });
+                            return result;
+                        }
+                        return { ...window.chrome.storage.local._data };
+                    },
+                    set: async (items) => {
+                        Object.assign(window.chrome.storage.local._data, items);
+                        // Trigger onChanged listeners
+                        if (window.chrome.storage.onChanged._listeners.length > 0) {
+                            const changes = {};
+                            Object.keys(items).forEach(key => {
+                                changes[key] = {
+                                    newValue: items[key],
+                                    oldValue: undefined
+                                };
+                            });
+                            window.chrome.storage.onChanged._listeners.forEach(listener => {
+                                listener(changes, 'local');
+                            });
+                        }
+                    },
+                    remove: async (keys) => {
+                        const keysArray = Array.isArray(keys) ? keys : [keys];
+                        keysArray.forEach(key => {
+                            delete window.chrome.storage.local._data[key];
+                        });
+                    },
+                    clear: async () => {
+                        window.chrome.storage.local._data = {};
+                    }
+                },
+                onChanged: {
+                    _listeners: [],
+                    addListener: (callback) => {
+                        window.chrome.storage.onChanged._listeners.push(callback);
+                    }
+                }
+            }
+        };
+
+        // Helper function to clear storage
+        window.clearStorage = async () => {
+            await window.chrome.storage.local.clear();
+        };
+
+        // Helper to clear sent messages
+        window.clearSentMessages = () => {
+            window.__sentMessages = [];
+        };
+
+        // Set ready status
+        document.getElementById('status').textContent = 'Test environment loaded and ready';
+        document.getElementById('status').className = 'ready';
+
+        // Set a flag that Playwright can check
+        window.testUtilitiesReady = true;
+    </script>
+
+    <!-- Loads the real modules and EventCaptureModule.
+         Sets window.__shimLoaded = true when done. -->
+    <script type="module" src="build/test-shim.bundle.js"></script>
+</body>
+</html>

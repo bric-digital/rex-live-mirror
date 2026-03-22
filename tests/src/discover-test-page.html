@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Discover Mock Page</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; }
+    </style>
+</head>
+<body>
+    <!--
+      Mock DOM structure replicating the REAL Perplexity Discover page layout.
+      Based on the actual rendered DOM captured from discover_rendered.html.
+      Used by discover-parser.spec.ts for unit testing the parser.
+    -->
+
+    <div class="w-full my-md md:my-lg px-md md:px-lg">
+        <div class="@container mx-auto w-full" style="max-width: 1080px;">
+            <div class="grid gap-6 @[860px]:grid-cols-[1fr_336px]">
+
+                <!-- MAIN COLUMN -->
+                <div class="min-w-0">
+                    <div data-testid="discover-you"
+                         class="ease flex grid-cols-12 duration-150 md:grid flex-col isolate md:isolation-auto">
+                        <div class="col-span-12 w-full md:w-auto mt-md md:mt-0">
+                            <div class="gap-md pb-lg flex grid-cols-3 flex-col md:grid lg:gap-y-lg">
+
+                                <!-- ========== CARD 1: Featured (col-span-3) with summary + time ========== -->
+                                <div class="col-span-3 border-subtlest ring-subtlest divide-subtlest">
+                                    <a class="group/card block h-full outline-none"
+                                       href="/discover/you/video-shows-us-tomahawk-missil-5AVXTCzuRIi4l3j8DalbTg">
+                                        <div class="group relative h-full transition-all duration-150 border-subtlest ring-subtlest divide-subtlest bg-base">
+                                            <div class="rounded-inherit pointer-events-none absolute inset-0 z-[4] border border-none border-subtlest ring-subtlest divide-subtlest"></div>
+                                            <div class="relative flex h-full flex-col grid grid-cols-2 gap-lg">
+                                                <!-- Image section (featured: side-by-side layout) -->
+                                                <div class="relative flex w-full shrink-0 overflow-hidden order-last items-start justify-center min-h-[250px] rounded-xl">
+                                                    <div class="relative overflow-hidden w-full rounded-none rounded-xl">
+                                                        <div class="size-full">
+                                                            <div class="w-full h-full">
+                                                                <div class="bg-subtle group relative size-full overflow-hidden rounded-none rounded-md">
+                                                                    <div class="absolute inset-0"></div>
+                                                                    <img alt="Video shows US Tomahawk missile hitting near Iran school that killed 175"
+                                                                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out transition-all ease-in-out"
+                                                                         draggable="true"
+                                                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ccc' width='400' height='300'/%3E%3C/svg%3E">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Content section -->
+                                                <div class="gap-xs flex size-full grow transform-gpu flex-col">
+                                                    <div class="gap-md flex flex-col prose ">
+                                                        <div class="gap-sm flex flex-col">
+                                                            <!-- HEADLINE (featured uses font-editorial + text-[1.75rem]) -->
+                                                            <div class="group-hover:text-super transition-colors duration-150 prose text-[1.75rem] w-full grow break-words font-editorial text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-3"
+                                                                 data-testid="thread-title">
+                                                                Video shows US Tomahawk missile hitting near Iran school that killed 175
+                                                            </div>
+                                                            <!-- POSTED TIME -->
+                                                            <div>
+                                                                <div class="gap-xs flex items-center">
+                                                                    <svg role="img"
+                                                                         class="inline-flex fill-current shrink-0 tabler-icon shrink-0 text-quiet size-4"
+                                                                         width="20" height="20">
+                                                                        <use xlink:href="#pplx-icon-clock"></use>
+                                                                    </svg>
+                                                                    <div class="font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                        Published
+                                                                    </div>
+                                                                    <div class="gap-x-xs flex cursor-default items-center font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"
+                                                                         data-state="closed">
+                                                                        <span class="truncate">4 hours ago</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- SUMMARY -->
+                                                        <div class="prose font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-6">
+                                                            Bellingcat geolocated footage showing a Tomahawk striking the IRGC compound adjacent to the girls' school, with smoke already rising from the school site.
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-1"></div>
+                                                    <!-- SOURCES/CITATIONS footer -->
+                                                    <div class="border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                        <div class="gap-sm flex w-full items-center justify-between">
+                                                            <div class="gap-x-sm flex grow items-center">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-default"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0635 0.704214C9.13824 0.253115 8.09868 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C8.09868 14 9.13824 13.7469 10.0635 13.2958C8.19825 11.8312 7 9.55552 7 7C7 4.44448 8.19825 2.16882 10.0635 0.704214Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-small"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.57242 0.57787C7.7928 0.20734 6.92062 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12C6.92062 12 7.7928 11.7927 8.57242 11.4221C7.00228 10.1385 6 8.18628 6 6C6 3.81372 7.00228 1.86154 8.57242 0.57787Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                                                    <div class="ml-xs flex">
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="youtube.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=youtube.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="en.wikipedia.org favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=en.wikipedia.org"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px;">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="nytimes.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=nytimes.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="font-sans text-xs font-medium text-quiet  truncate selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    27 sources
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <button aria-label="Like" data-state="closed" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                                <button data-state="closed" aria-label="Article actions" aria-expanded="false" aria-haspopup="menu" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+
+                                <!-- ========== CARD 2: Regular (no summary, no time) ========== -->
+                                <div class="border-subtlest ring-subtlest divide-subtlest">
+                                    <a class="group/card block h-full outline-none"
+                                       href="/discover/you/goldman-sachs-warns-of-extreme-ILnwYL9ySBu_PIJGW423Gw">
+                                        <div class="group relative h-full transition-all duration-150 hover:shadow-subtle rounded-xl border-subtlest ring-subtlest divide-subtlest bg-raised">
+                                            <div class="rounded-inherit pointer-events-none absolute inset-0 z-[4] border border-subtlest ring-subtlest divide-subtlest"></div>
+                                            <div class="relative flex h-full flex-col">
+                                                <!-- Image section (regular: stacked layout) -->
+                                                <div class="relative flex w-full shrink-0 overflow-hidden aspect-[3/2] rounded-t-xl">
+                                                    <div class="relative overflow-hidden w-full rounded-none flex rounded-t-xl">
+                                                        <div class="size-full">
+                                                            <div class="w-full h-full">
+                                                                <div class="bg-subtle group relative size-full overflow-hidden rounded-none rounded-md">
+                                                                    <div class="absolute inset-0"></div>
+                                                                    <img alt="Goldman Sachs warns of 'extreme fragility' beneath calm US stock market"
+                                                                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out transition-all ease-in-out"
+                                                                         draggable="true"
+                                                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23ddd' width='400' height='300'/%3E%3C/svg%3E">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Content section -->
+                                                <div class="gap-xs flex size-full grow transform-gpu flex-col py-sm">
+                                                    <div class="gap-md flex flex-col prose  px-md">
+                                                        <div class="gap-sm flex flex-col">
+                                                            <!-- HEADLINE (regular uses font-sans text-base) -->
+                                                            <div class="group-hover:text-super transition-colors duration-150 prose w-full grow break-words font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-3"
+                                                                 data-testid="thread-title">
+                                                                Goldman Sachs warns of 'extreme fragility' beneath calm US stock market
+                                                            </div>
+                                                            <!-- No time for this card -->
+                                                        </div>
+                                                        <!-- No summary for this card -->
+                                                    </div>
+                                                    <div class="flex-1"></div>
+                                                    <!-- SOURCES/CITATIONS footer -->
+                                                    <div class="pl-md pr-sm border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                        <div class="gap-sm flex w-full items-center justify-between">
+                                                            <div class="gap-x-sm flex grow items-center">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-default"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0635 0.704214C9.13824 0.253115 8.09868 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C8.09868 14 9.13824 13.7469 10.0635 13.2958C8.19825 11.8312 7 9.55552 7 7C7 4.44448 8.19825 2.16882 10.0635 0.704214Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-small"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.57242 0.57787C7.7928 0.20734 6.92062 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12C6.92062 12 7.7928 11.7927 8.57242 11.4221C7.00228 10.1385 6 8.18628 6 6C6 3.81372 7.00228 1.86154 8.57242 0.57787Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                                                    <div class="ml-xs flex">
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="bloomberg.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=bloomberg.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="finance.yahoo.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=finance.yahoo.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px;">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="news.bloomberglaw.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=news.bloomberglaw.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="font-sans text-xs font-medium text-quiet  truncate selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    27 sources
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <button aria-label="Like" data-state="closed" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                                <button data-state="closed" aria-label="Article actions" aria-expanded="false" aria-haspopup="menu" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+
+                                <!-- ========== CARD 3: Regular (no summary, no time) ========== -->
+                                <div class="border-subtlest ring-subtlest divide-subtlest">
+                                    <a class="group/card block h-full outline-none"
+                                       href="/discover/you/yardeni-raises-market-meltdown-NU5_Mw9jTIqkFd4.OnDRhw">
+                                        <div class="group relative h-full transition-all duration-150 hover:shadow-subtle rounded-xl border-subtlest ring-subtlest divide-subtlest bg-raised">
+                                            <div class="rounded-inherit pointer-events-none absolute inset-0 z-[4] border border-subtlest ring-subtlest divide-subtlest"></div>
+                                            <div class="relative flex h-full flex-col">
+                                                <!-- Image section -->
+                                                <div class="relative flex w-full shrink-0 overflow-hidden aspect-[3/2] rounded-t-xl">
+                                                    <div class="relative overflow-hidden w-full rounded-none flex rounded-t-xl">
+                                                        <div class="size-full">
+                                                            <div class="w-full h-full">
+                                                                <div class="bg-subtle group relative size-full overflow-hidden rounded-none rounded-md">
+                                                                    <div class="absolute inset-0"></div>
+                                                                    <img alt="Yardeni raises market meltdown odds to 35% as Iran war widens"
+                                                                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out transition-all ease-in-out"
+                                                                         draggable="true"
+                                                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23eee' width='400' height='300'/%3E%3C/svg%3E">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Content section -->
+                                                <div class="gap-xs flex size-full grow transform-gpu flex-col py-sm">
+                                                    <div class="gap-md flex flex-col prose  px-md">
+                                                        <div class="gap-sm flex flex-col">
+                                                            <div class="group-hover:text-super transition-colors duration-150 prose w-full grow break-words font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-3"
+                                                                 data-testid="thread-title">
+                                                                Yardeni raises market meltdown odds to 35% as Iran war widens
+                                                            </div>
+                                                            <!-- No time for this card -->
+                                                        </div>
+                                                        <!-- No summary for this card -->
+                                                    </div>
+                                                    <div class="flex-1"></div>
+                                                    <!-- SOURCES/CITATIONS footer -->
+                                                    <div class="pl-md pr-sm border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                        <div class="gap-sm flex w-full items-center justify-between">
+                                                            <div class="gap-x-sm flex grow items-center">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-default"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0635 0.704214C9.13824 0.253115 8.09868 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C8.09868 14 9.13824 13.7469 10.0635 13.2958C8.19825 11.8312 7 9.55552 7 7C7 4.44448 8.19825 2.16882 10.0635 0.704214Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-small"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.57242 0.57787C7.7928 0.20734 6.92062 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12C6.92062 12 7.7928 11.7927 8.57242 11.4221C7.00228 10.1385 6 8.18628 6 6C6 3.81372 7.00228 1.86154 8.57242 0.57787Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                                                    <div class="ml-xs flex">
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="yardeniquicktakes.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=yardeniquicktakes.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="bloomberg.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=bloomberg.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px;">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="youtube.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=youtube.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="font-sans text-xs font-medium text-quiet  truncate selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    18 sources
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <button aria-label="Like" data-state="closed" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                                <button data-state="closed" aria-label="Article actions" aria-expanded="false" aria-haspopup="menu" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+
+                                <!-- ========== CARD 4: Featured (col-span-3) with summary + time ========== -->
+                                <div class="col-span-3 border-subtlest ring-subtlest divide-subtlest">
+                                    <a class="group/card block h-full outline-none"
+                                       href="/discover/you/iran-reaffirms-military-alliance-xK9pL2mNRTqvW8j3FhYz7A">
+                                        <div class="group relative h-full transition-all duration-150 border-subtlest ring-subtlest divide-subtlest bg-base">
+                                            <div class="rounded-inherit pointer-events-none absolute inset-0 z-[4] border border-none border-subtlest ring-subtlest divide-subtlest"></div>
+                                            <div class="relative flex h-full flex-col grid grid-cols-2 gap-lg">
+                                                <!-- Image section (featured: side-by-side layout) -->
+                                                <div class="relative flex w-full shrink-0 overflow-hidden order-last items-start justify-center min-h-[250px] rounded-xl">
+                                                    <div class="relative overflow-hidden w-full rounded-none rounded-xl">
+                                                        <div class="size-full">
+                                                            <div class="w-full h-full">
+                                                                <div class="bg-subtle group relative size-full overflow-hidden rounded-none rounded-md">
+                                                                    <div class="absolute inset-0"></div>
+                                                                    <img alt="Iran reaffirms military alliance with Russia as war intensifies"
+                                                                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out transition-all ease-in-out"
+                                                                         draggable="true"
+                                                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23bbb' width='400' height='300'/%3E%3C/svg%3E">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Content section -->
+                                                <div class="gap-xs flex size-full grow transform-gpu flex-col">
+                                                    <div class="gap-md flex flex-col prose ">
+                                                        <div class="gap-sm flex flex-col">
+                                                            <!-- HEADLINE (featured uses font-editorial + text-[1.75rem]) -->
+                                                            <div class="group-hover:text-super transition-colors duration-150 prose text-[1.75rem] w-full grow break-words font-editorial text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-3"
+                                                                 data-testid="thread-title">
+                                                                Iran reaffirms military alliance with Russia as war intensifies
+                                                            </div>
+                                                            <!-- POSTED TIME -->
+                                                            <div>
+                                                                <div class="gap-xs flex items-center">
+                                                                    <svg role="img"
+                                                                         class="inline-flex fill-current shrink-0 tabler-icon shrink-0 text-quiet size-4"
+                                                                         width="20" height="20">
+                                                                        <use xlink:href="#pplx-icon-clock"></use>
+                                                                    </svg>
+                                                                    <div class="font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                        Published
+                                                                    </div>
+                                                                    <div class="gap-x-xs flex cursor-default items-center font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"
+                                                                         data-state="closed">
+                                                                        <span class="truncate">9 hours ago</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- SUMMARY -->
+                                                        <div class="prose font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-6">
+                                                            Foreign Minister Araghchi said Tehran will accept only a 'permanent end' to the war, not a ceasefire, and confirmed ongoing military ties with Russia.
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-1"></div>
+                                                    <!-- SOURCES/CITATIONS footer -->
+                                                    <div class="border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                        <div class="gap-sm flex w-full items-center justify-between">
+                                                            <div class="gap-x-sm flex grow items-center">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-default"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0635 0.704214C9.13824 0.253115 8.09868 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C8.09868 14 9.13824 13.7469 10.0635 13.2958C8.19825 11.8312 7 9.55552 7 7C7 4.44448 8.19825 2.16882 10.0635 0.704214Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-small"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.57242 0.57787C7.7928 0.20734 6.92062 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12C6.92062 12 7.7928 11.7927 8.57242 11.4221C7.00228 10.1385 6 8.18628 6 6C6 3.81372 7.00228 1.86154 8.57242 0.57787Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                                                    <div class="ml-xs flex">
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="youtube.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=youtube.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="nytimes.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=nytimes.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px;">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="jpost.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=jpost.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="font-sans text-xs font-medium text-quiet  truncate selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    31 sources
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <button aria-label="Like" data-state="closed" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                                <button data-state="closed" aria-label="Article actions" aria-expanded="false" aria-haspopup="menu" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+
+                                <!-- ========== CARD 5: Regular (no summary, has time) ========== -->
+                                <div class="border-subtlest ring-subtlest divide-subtlest">
+                                    <a class="group/card block h-full outline-none"
+                                       href="/discover/you/chinese-scientists-set-record-qR7mN4kLSZeW2xYpTvBc1g">
+                                        <div class="group relative h-full transition-all duration-150 hover:shadow-subtle rounded-xl border-subtlest ring-subtlest divide-subtlest bg-raised">
+                                            <div class="rounded-inherit pointer-events-none absolute inset-0 z-[4] border border-subtlest ring-subtlest divide-subtlest"></div>
+                                            <div class="relative flex h-full flex-col">
+                                                <!-- Image section -->
+                                                <div class="relative flex w-full shrink-0 overflow-hidden aspect-[3/2] rounded-t-xl">
+                                                    <div class="relative overflow-hidden w-full rounded-none flex rounded-t-xl">
+                                                        <div class="size-full">
+                                                            <div class="w-full h-full">
+                                                                <div class="bg-subtle group relative size-full overflow-hidden rounded-none rounded-md">
+                                                                    <div class="absolute inset-0"></div>
+                                                                    <img alt="Chinese scientists set record with quantum computing breakthrough"
+                                                                         class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out transition-all ease-in-out"
+                                                                         draggable="true"
+                                                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect fill='%23aaa' width='400' height='300'/%3E%3C/svg%3E">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Content section -->
+                                                <div class="gap-xs flex size-full grow transform-gpu flex-col py-sm">
+                                                    <div class="gap-md flex flex-col prose  px-md">
+                                                        <div class="gap-sm flex flex-col">
+                                                            <div class="group-hover:text-super transition-colors duration-150 prose w-full grow break-words font-sans text-base text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super line-clamp-3"
+                                                                 data-testid="thread-title">
+                                                                Chinese scientists set record with quantum computing breakthrough
+                                                            </div>
+                                                            <!-- POSTED TIME -->
+                                                            <div>
+                                                                <div class="gap-xs flex items-center">
+                                                                    <svg role="img"
+                                                                         class="inline-flex fill-current shrink-0 tabler-icon shrink-0 text-quiet size-4"
+                                                                         width="20" height="20">
+                                                                        <use xlink:href="#pplx-icon-clock"></use>
+                                                                    </svg>
+                                                                    <div class="font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                        Published
+                                                                    </div>
+                                                                    <div class="gap-x-xs flex cursor-default items-center font-sans text-xs font-medium text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super"
+                                                                         data-state="closed">
+                                                                        <span class="truncate">12 hours ago</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <!-- No summary for this card -->
+                                                    </div>
+                                                    <div class="flex-1"></div>
+                                                    <!-- SOURCES/CITATIONS footer -->
+                                                    <div class="pl-md pr-sm border-subtlest ring-subtlest divide-subtlest flex items-center justify-between">
+                                                        <div class="gap-sm flex w-full items-center justify-between">
+                                                            <div class="gap-x-sm flex grow items-center">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-default"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.0635 0.704214C9.13824 0.253115 8.09868 0 7 0C3.13401 0 0 3.13401 0 7C0 10.866 3.13401 14 7 14C8.09868 14 9.13824 13.7469 10.0635 13.2958C8.19825 11.8312 7 9.55552 7 7C7 4.44448 8.19825 2.16882 10.0635 0.704214Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" class="absolute opacity-0">
+                                                                    <defs><clipPath id="clip-path-small"><path fill-rule="evenodd" clip-rule="evenodd" d="M8.57242 0.57787C7.7928 0.20734 6.92062 0 6 0C2.68629 0 0 2.68629 0 6C0 9.31371 2.68629 12 6 12C6.92062 12 7.7928 11.7927 8.57242 11.4221C7.00228 10.1385 6 8.18628 6 6C6 3.81372 7.00228 1.86154 8.57242 0.57787Z" fill="#D9D9D9"></path></clipPath></defs>
+                                                                </svg>
+                                                                <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                                                                    <div class="ml-xs flex">
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px; clip-path: url(&quot;#clip-path-default&quot;);">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="scmp.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=scmp.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="relative z-0 inline-flex shrink-0 overflow-hidden rounded-full -ml-[5px]"
+                                                                             style="width: 14px; height: 14px;">
+                                                                            <div class="relative shrink-0 overflow-hidden flex items-center justify-center rounded-full"
+                                                                                 style="width: 14px; height: 14px;">
+                                                                                <img class="relative block"
+                                                                                     alt="nature.com favicon"
+                                                                                     width="14" height="14"
+                                                                                     src="https://www.google.com/s2/favicons?sz=128&amp;domain=nature.com"
+                                                                                     style="width: 14px; height: 14px;">
+                                                                                <div class="absolute inset-0 ring-1 ring-inset ring-[black]/10 dark:ring-transparent rounded-full"></div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="font-sans text-xs font-medium text-quiet  truncate selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                                    15 sources
+                                                                </div>
+                                                            </div>
+                                                            <div class="flex items-center">
+                                                                <button aria-label="Like" data-state="closed" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                                <button data-state="closed" aria-label="Article actions" aria-expanded="false" aria-haspopup="menu" type="button"
+                                                                        class="reset interactable inline-flex rounded-full aspect-square p-0">
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+
+                            </div>
+                            <!-- Pagination (real DOM has this) -->
+                            <div class="border border-transparent"></div>
+                            <a class="hidden" href="?page=2">Next Page</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR: Should be excluded from extraction -->
+                <aside class="w-full @[860px]:w-[336px] hidden @[860px]:block">
+                    <div class="" style="">
+                        <div class="mt-lg pb-lg flex flex-col gap-lg !mt-0">
+                            <div class="h-full empty:hidden">
+                                <div class="border-subtlest ring-subtlest divide-subtlest bg-subtle rounded-xl p-md">
+                                    <div class="mb-md flex items-start justify-between">
+                                        <div>
+                                            <div class="font-sans text-base font-medium text-foreground selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                Make it yours
+                                            </div>
+                                            <div class="font-sans text-sm text-quiet  selection:bg-super/50 selection:text-foreground dark:selection:bg-super/10 dark:selection:text-super">
+                                                Select topics and interests to customize your Discover experience
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="gap-sm flex flex-wrap">
+                                        <button class="px-sm py-xs border inline-flex cursor-pointer items-center gap-1.5 rounded-md duration-150 active:scale-[0.95] border-subtle">
+                                            <span class="font-sans text-sm font-medium text-foreground">Technology</span>
+                                        </button>
+                                        <button class="px-sm py-xs border inline-flex cursor-pointer items-center gap-1.5 rounded-md duration-150 active:scale-[0.95] border-subtle">
+                                            <span class="font-sans text-sm font-medium text-foreground">Science</span>
+                                        </button>
+                                        <button class="px-sm py-xs border inline-flex cursor-pointer items-center gap-1.5 rounded-md duration-150 active:scale-[0.95] border-subtle">
+                                            <span class="font-sans text-sm font-medium text-foreground">Finance</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Chrome mock + test utilities -->
+    <script type="module">
+        // Minimal chrome mock for parser tests (parser doesn't use chrome APIs, but page needs it)
+        window.chrome = window.chrome || {
+            runtime: { getManifest: () => ({ name: 'Test' }), sendMessage: () => {}, onMessage: { addListener: () => {} } },
+            storage: {
+                local: { _data: {}, get: async () => ({}), set: async () => {}, remove: async () => {}, clear: async () => {} },
+                onChanged: { _listeners: [], addListener: () => {} }
+            }
+        };
+        window.testUtilitiesReady = true;
+    </script>
+
+    <!-- Loads the PerplexityDiscoverParser and exposes it on window.__DiscoverParser -->
+    <script type="module" src="build/discover-shim.bundle.js"></script>
+</body>
+</html>
