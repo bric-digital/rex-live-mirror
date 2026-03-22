@@ -3,6 +3,9 @@ import { PerplexityParser } from './chatbots/perplexity.js'
 import { ChatGPTParser } from './chatbots/chatgpt.js'
 import { GeminiParser } from './chatbots/gemini.js'
 import { ClaudeParser } from './chatbots/claude.js'
+import { PerplexityDiscoverParser } from './discover/perplexity-discover.js'
+import { PerplexityArticleParser } from './discover/perplexity-article.js'
+import { PerplexityFinanceParser } from './finance/perplexity-finance.js'
 
 export interface ExtractedSource {
   source_title: string
@@ -550,5 +553,167 @@ const llmChatbotModule = new LLMChatbotBrowserModule()
 registerREXModule(llmChatbotModule)
 
 console.log('[LLM Chatbot Browser] Module registered and ready')
+
+/**
+ * Discover & Finance Capture Module - Browser Context
+ * Runs on Perplexity Discover feed, article, and Finance pages.
+ * Extracts structured data and sends it to the service worker.
+ */
+class DiscoverCaptureBrowserModule extends REXClientModule {
+  private enabled: boolean = false
+  private sources: string[] = []
+  private transmittedHeadlines: Set<string> = new Set()
+  private lastArticleUrl: string = ''
+  private pollTimer: ReturnType<typeof setInterval> | null = null
+
+  moduleName(): string {
+    return 'DiscoverCaptureBrowserModule'
+  }
+
+  setup(): void {
+    chrome.storage.local.get('REXConfiguration', (result) => {
+      const config = result.REXConfiguration
+      const newsCaptureConfig = config?.['news_capture']
+
+      if (!newsCaptureConfig?.enabled) {
+        console.log('[Discover Capture] news_capture not enabled, skipping')
+        return
+      }
+
+      this.enabled = true
+      this.sources = newsCaptureConfig.sources ?? []
+      console.log('[Discover Capture] Enabled. Sources:', this.sources)
+
+      this.initializeCapture()
+    })
+  }
+
+  private initializeCapture(): void {
+    const url = window.location.href
+
+    // Article pages: /discover/you/<slug> — check BEFORE the feed pattern
+    if (this.sources.includes('perplexity-discover') && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
+      console.log('[Discover Capture] Article page detected')
+      this.startArticleCapture()
+      return
+    }
+
+    // Discover feed: /discover (but not /discover/you/...)
+    if (this.sources.includes('perplexity-discover') && url.includes('perplexity.ai/discover')) {
+      console.log('[Discover Capture] Discover feed detected')
+      this.startDiscoverCapture()
+      return
+    }
+
+    // Finance page
+    if (this.sources.includes('perplexity-finance') && url.includes('perplexity.ai/finance')) {
+      console.log('[Discover Capture] Finance page detected')
+      this.startFinanceCapture()
+      return
+    }
+
+    console.log('[Discover Capture] URL does not match any capture target:', url)
+  }
+
+  private startDiscoverCapture(): void {
+    // Poll periodically — the feed loads cards progressively
+    const capture = () => {
+      const parser = new PerplexityDiscoverParser()
+      const validation = parser.validateSelectors()
+      if (!validation.valid) {
+        console.log('[Discover Capture] Selectors not yet valid, waiting...')
+        return
+      }
+
+      const blurbs = parser.extractNewsBlurbs()
+      const newBlurbs = blurbs.filter(b => !this.transmittedHeadlines.has(b.headline))
+      if (newBlurbs.length === 0) return
+
+      newBlurbs.forEach(b => this.transmittedHeadlines.add(b.headline))
+      console.log(`[Discover Capture] Sending ${newBlurbs.length} new blurbs`)
+
+      chrome.runtime.sendMessage({
+        messageType: 'discoverNewsBatch',
+        source: 'perplexity-discover',
+        url: window.location.href,
+        timestamp: Date.now(),
+        blurbs: newBlurbs,
+      })
+    }
+
+    // Initial capture after page settles, then poll for new cards
+    setTimeout(capture, 1500)
+    this.pollTimer = setInterval(capture, 10000)
+  }
+
+  private startArticleCapture(): void {
+    const capture = () => {
+      const url = window.location.href
+      const parser = new PerplexityArticleParser()
+      const validation = parser.validateArticle()
+      if (!validation.valid) {
+        console.log('[Discover Capture] Article not yet ready, waiting...')
+        return
+      }
+
+      const article = parser.extractArticle()
+      if (!article) return
+
+      // Re-send if URL changed or content grew (progressive loading)
+      if (url === this.lastArticleUrl && article['content*'] === this.lastArticleUrl) return
+      this.lastArticleUrl = url
+
+      console.log('[Discover Capture] Sending article:', article.headline)
+      chrome.runtime.sendMessage({
+        messageType: 'discoverArticleBatch',
+        article,
+        url,
+        timestamp: Date.now(),
+      })
+    }
+
+    setTimeout(capture, 1500)
+    this.pollTimer = setInterval(capture, 8000)
+  }
+
+  private startFinanceCapture(): void {
+    const capture = () => {
+      const parser = new PerplexityFinanceParser()
+      const domains = parser.extractMarketSummarySources()
+      if (domains.length === 0) {
+        console.log('[Discover Capture] Market Summary not yet loaded, waiting...')
+        return
+      }
+
+      console.log('[Discover Capture] Sending finance sources:', domains)
+      chrome.runtime.sendMessage({
+        messageType: 'financeMarketSources',
+        source: 'perplexity-finance',
+        url: window.location.href,
+        timestamp: Date.now(),
+        domains,
+      })
+
+      // Finance sources don't change — stop polling after first successful capture
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer)
+        this.pollTimer = null
+      }
+    }
+
+    setTimeout(capture, 1500)
+    this.pollTimer = setInterval(capture, 5000)
+  }
+
+  checkRequirement(requirement: string): Promise<boolean> {
+    console.debug(`[Discover Capture] Checking requirement: ${requirement}`)
+    return Promise.resolve(this.enabled)
+  }
+}
+
+const discoverCaptureModule = new DiscoverCaptureBrowserModule()
+registerREXModule(discoverCaptureModule)
+
+console.log('[Discover Capture Browser] Module registered and ready')
 
 export default llmChatbotModule
