@@ -38,7 +38,7 @@
     "@types/chrome": "^0.0.275",
     "@types/node": "^24.10.0",
     "esbuild": "^0.27.2",
-    "eslint": "^9.39.0",
+    "eslint": "^10.1.0",
     "jiti": "^2.6.1",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.13.0"
