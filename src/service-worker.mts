@@ -602,6 +602,14 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
   setup(): void {
     console.log('[Page Capture] Service Worker module initializing...')
     this.loadConfiguration()
+
+    // React to configuration changes (e.g., after initial config load or server refresh)
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.REXConfiguration) {
+        console.log('[Page Capture] REXConfiguration changed, reloading...')
+        this.loadConfiguration()
+      }
+    })
   }
 
   private loadConfiguration(): void {
