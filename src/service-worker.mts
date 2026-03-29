@@ -594,7 +594,6 @@ const PAGE_CAPTURE_DEDUPE_MS = 60 * 60 * 1000 // 1 hour
 class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
   private enabled: boolean = false
   private allowLists: string[] = []
-  private listDatabase: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
 
   moduleName(): string {
     return 'PageCaptureServiceWorkerModule'
@@ -620,8 +619,16 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
       console.log('[Page Capture] Service Worker enabled. Allow lists:', this.allowLists)
 
       if (this.allowLists.length > 0) {
-        listUtils.initializeListDatabase(this.allowLists)
-          .then(db => { this.listDatabase = db })
+        const listsConfig = config?.['lists']
+        listUtils.initializeListDatabase()
+          .then(() => {
+            console.log('[Page Capture] List database initialized')
+            // Sync list entries from config into IndexedDB so allow_list matching works
+            if (listsConfig && typeof listsConfig === 'object' && !Array.isArray(listsConfig)) {
+              return listUtils.parseAndSyncLists(listsConfig as Parameters<typeof listUtils.parseAndSyncLists>[0])
+            }
+          })
+          .then(() => { console.log('[Page Capture] Lists synced from configuration') })
           .catch(err => console.warn('[Page Capture] Failed to initialize list database:', err))
       }
     })
@@ -638,23 +645,53 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
     const url: string = message.url ?? ''
     const domain: string = message.domain ?? ''
 
-    // Check allow_lists if configured
-    if (this.allowLists.length > 0 && this.listDatabase) {
-      const allowed = listUtils.matchDomainAgainstList(domain, this.listDatabase)
+    // Check allow_lists if configured (async — sendResponse called after check)
+    if (this.allowLists.length > 0) {
+      this.checkAllowListsAndDispatch(url, domain, message, sendResponse)
+      return true // Keep message channel open for async sendResponse
+    }
+
+    // No allow_lists configured — dispatch immediately
+    this.deduplicateAndDispatch(url, domain, message, sendResponse)
+    return true
+  }
+
+  private async checkAllowListsAndDispatch(
+    url: string, domain: string, message: any, sendResponse: (response: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
+  ): Promise<void> {
+    try {
+      let allowed = false
+      for (const listName of this.allowLists) {
+        const match = await listUtils.matchDomainAgainstList(url, listName)
+        if (match) {
+          allowed = true
+          break
+        }
+      }
+
       if (!allowed) {
         console.log('[Page Capture] Domain not in allow list, skipping:', domain)
         sendResponse({ success: false, reason: 'not-allowed' })
-        return true
+        return
       }
-    }
 
+      this.deduplicateAndDispatch(url, domain, message, sendResponse)
+    } catch (err) {
+      console.warn('[Page Capture] Error checking allow lists:', err)
+      sendResponse({ success: false, reason: 'error' })
+    }
+  }
+
+  private deduplicateAndDispatch(
+    url: string, domain: string, message: any, sendResponse: (response: any) => void // eslint-disable-line @typescript-eslint/no-explicit-any
+  ): void {
     // Deduplicate by URL within the dedupe window
     const now = Date.now()
     const lastSeen = PAGE_CAPTURE_SEEN.get(url)
     if (lastSeen !== undefined && now - lastSeen < PAGE_CAPTURE_DEDUPE_MS) {
       console.log('[Page Capture] Duplicate URL within dedupe window, skipping:', url)
       sendResponse({ success: false, reason: 'duplicate' })
-      return true
+      return
     }
     PAGE_CAPTURE_SEEN.set(url, now)
 
@@ -675,7 +712,6 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
     })
 
     sendResponse({ success: true })
-    return true
   }
 }
 
