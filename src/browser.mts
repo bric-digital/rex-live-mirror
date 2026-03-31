@@ -7,6 +7,10 @@ import { ClaudeParser } from './chatbots/claude.js'
 import { PerplexityDiscoverParser } from './discover/perplexity-discover.js'
 import { PerplexityArticleParser } from './discover/perplexity-article.js'
 import { PerplexityFinanceParser } from './finance/perplexity-finance.js'
+import { CNBCHomepageParser } from './news/cnbc.js'
+import { BloombergHomepageParser } from './news/bloomberg.js'
+import { YahooFinanceHomepageParser } from './news/yahoo-finance.js'
+import type { HomepageParser, HomepageSiteConfig } from './news/types.js'
 
 export interface ExtractedSource {
   source_title: string
@@ -616,6 +620,14 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       return
     }
 
+    // Financial news homepage parsers — extract headline blurbs instead of Readability article
+    const homepageParser = this.getHomepageParser(url)
+    if (homepageParser) {
+      console.log('[Page Capture] Financial news homepage detected:', url)
+      this.startHomepageCapture(homepageParser)
+      return
+    }
+
     // Generic Readability-based capture — browser context sends domain; service worker filters by allow_lists
     console.log('[Page Capture] Using generic Readability capture for:', url)
     this.initializePageCapture(this.pageCaptureConfig)
@@ -765,6 +777,76 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
 
     setTimeout(capture, 1500)
     this.pollTimer = setInterval(capture, 5000)
+  }
+
+  private getHomepageParser(url: string): HomepageParser | null {
+    const hostname = new URL(url).hostname
+    const pathname = new URL(url).pathname
+
+    // Read site-specific parser configs from page_capture.homepage_parsers
+    const parsers = this.pageCaptureConfig?.homepage_parsers as Record<string, HomepageSiteConfig> | undefined
+
+    // Default site configs used when homepage_parsers is not in config
+    const defaults: Record<string, HomepageSiteConfig> = {
+      cnbc: { domain: 'cnbc.com', paths: ['/'], selectors: {} },
+      bloomberg: { domain: 'bloomberg.com', paths: ['/', '/markets'], selectors: {} },
+      'yahoo-finance': { domain: 'finance.yahoo.com', paths: ['/', '/news', '/news/'], selectors: {} },
+    }
+
+    const sites = parsers ?? defaults
+
+    for (const [key, siteConfig] of Object.entries(sites)) {
+      if (!hostname.includes(siteConfig.domain)) continue
+
+      const allowedPaths = siteConfig.paths ?? ['/']
+      const pathMatch = allowedPaths.some((p) => pathname === p || pathname === p + '/')
+      if (!pathMatch) continue
+
+      const selectors = siteConfig.selectors ?? {}
+
+      if (key === 'cnbc' || siteConfig.domain === 'cnbc.com') {
+        return new CNBCHomepageParser(selectors)
+      }
+      if (key === 'bloomberg' || siteConfig.domain === 'bloomberg.com') {
+        return new BloombergHomepageParser(selectors)
+      }
+      if (key === 'yahoo-finance' || siteConfig.domain.includes('yahoo.com')) {
+        return new YahooFinanceHomepageParser(selectors)
+      }
+    }
+
+    return null
+  }
+
+  private startHomepageCapture(parser: HomepageParser): void {
+    const capture = () => {
+      const validation = parser.validateSelectors()
+      if (!validation.valid) {
+        console.log('[Page Capture] Homepage selectors not yet valid, waiting...')
+        return
+      }
+
+      const blurbs = parser.extractBlurbs()
+      const newBlurbs = blurbs.filter(b => !this.transmittedHeadlines.has(b.headline))
+      if (newBlurbs.length === 0) return
+
+      newBlurbs.forEach(b => this.transmittedHeadlines.add(b.headline))
+      console.log(`[Page Capture] Sending ${newBlurbs.length} homepage blurbs`)
+
+      chrome.runtime.sendMessage({
+        messageType: 'homepageBlurbsBatch',
+        source: blurbs[0]?.source ?? 'unknown',
+        url: window.location.href,
+        domain: window.location.hostname,
+        timestamp: Date.now(),
+        blurbs: newBlurbs,
+      })
+    }
+
+    // Initial capture after page settles, then poll for dynamic content
+    const delayMs = this.pageCaptureConfig?.capture_delay_ms ?? 1500
+    setTimeout(capture, delayMs)
+    this.pollTimer = setInterval(capture, 10000)
   }
 
   checkRequirement(requirement: string): Promise<boolean> {

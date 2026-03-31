@@ -518,8 +518,12 @@ registerREXModule(llmChatbotModule)
  * Handles discoverNewsBatch, discoverArticleBatch, and financeMarketSources messages
  * from the browser context and dispatches events to PDK.
  */
+const DEFAULT_HOMEPAGE_BLURB_DEDUPE_MS = 60 * 60 * 1000 // 1 hour
+
 class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
   private transmittedHeadlines: Set<string> = new Set()
+  private homepageBlurbsSeen: Map<string, number> = new Map()
+  private homepageBlurbDedupMs: number = DEFAULT_HOMEPAGE_BLURB_DEDUPE_MS
 
   moduleName(): string {
     return 'DiscoverCaptureServiceWorkerModule'
@@ -527,6 +531,25 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
 
   setup(): void {
     console.log('[Discover Capture] Service Worker module initializing...')
+    this.loadDedupConfig()
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName === 'local' && changes.REXConfiguration) {
+        this.loadDedupConfig()
+      }
+    })
+  }
+
+  private loadDedupConfig(): void {
+    chrome.storage.local.get('REXConfiguration', (result) => {
+      const config = result.REXConfiguration
+      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
+      const dedupMinutes = pageCaptureConfig?.homepage_blurb_dedup_minutes
+      if (typeof dedupMinutes === 'number' && dedupMinutes > 0) {
+        this.homepageBlurbDedupMs = dedupMinutes * 60 * 1000
+        console.log(`[Discover Capture] Homepage blurb dedup window: ${dedupMinutes} minutes`)
+      }
+    })
   }
 
   handleMessage(message: any, sender: any, sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -572,6 +595,46 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
           url: message.url,
         })
       }
+      sendResponse({ success: true })
+      return true
+    }
+
+    if (message.messageType === 'homepageBlurbsBatch') {
+      const now = Date.now()
+      const blurbs: any[] = message.blurbs ?? [] // eslint-disable-line @typescript-eslint/no-explicit-any
+      let dispatched = 0
+      let skipped = 0
+      for (const blurb of blurbs) {
+        const headline = blurb.headline as string
+        if (!headline) continue
+
+        // Time-based dedup: skip if same headline was captured within the dedupe window
+        const lastSeen = this.homepageBlurbsSeen.get(headline)
+        if (lastSeen !== undefined && now - lastSeen < this.homepageBlurbDedupMs) {
+          skipped++
+          continue
+        }
+        this.homepageBlurbsSeen.set(headline, now)
+
+        dispatchEvent({
+          name: 'news-homepage-blurb',
+          platform: message.source ?? 'unknown',
+          data_source: 'extension_homepage_capture',
+          url: message.url,
+          domain: message.domain,
+          date: now,
+          blurb,
+        })
+        dispatched++
+      }
+
+      // Prune entries older than the dedup window to prevent unbounded growth.
+      // Runs every batch since it's a cheap O(n) scan over a small map.
+      for (const [key, ts] of this.homepageBlurbsSeen) {
+        if (now - ts > this.homepageBlurbDedupMs) this.homepageBlurbsSeen.delete(key)
+      }
+
+      console.log(`[Discover Capture] Homepage blurbs: ${dispatched} dispatched, ${skipped} deduplicated`)
       sendResponse({ success: true })
       return true
     }
