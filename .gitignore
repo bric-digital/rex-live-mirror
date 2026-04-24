@@ -8,7 +8,8 @@ dist/
 
 # Test artifacts
 tests/src/build/
-tests/extension/
+tests/extension/*.bundle.js
+tests/extension/*.bundle.js.map
 playwright-report/
 test-results/
 .perplexity-profile/

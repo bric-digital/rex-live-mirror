@@ -5,19 +5,19 @@ type ServiceWorkerLike = {
 }
 
 /**
- * Inject live mirror config + identifier directly into chrome.storage and wait for
- * the module to acknowledge it.
+ * Inject live mirror config + identifier via rex-core's message API.
+ * Identifier is set through `setIdentifier`; configuration through
+ * `loadInitialConfiguration` — both consumed by rex-core, not by direct
+ * chrome.storage.local writes, so modules follow their real config path.
  */
 export async function injectConfigAndIdentifier(
   serviceWorker: ServiceWorkerLike,
   overrides: Record<string, unknown> = {}
 ): Promise<void> {
-  await serviceWorker.evaluate(async (config) => {
-    await chrome.storage.local.set({
-      rexIdentifier: 'rex-live-mirror-test-user',
-      REXConfiguration: config,
-    })
-  }, {
+  const configuration = {
+    configuration_url: 'config.json',
+    identifier: 'rex-live-mirror-test-user',
+    ui: [{ title: 'Test', identifier: 'main', default: true }],
     llm_capture: {
       enabled: true,
       sources: ['perplexity', 'chatgpt', 'gemini', 'claude'],
@@ -38,7 +38,23 @@ export async function injectConfigAndIdentifier(
       },
     },
     ...overrides,
-  })
+  }
+
+  await serviceWorker.evaluate(async (payload) => {
+    const sendCore = (message: Record<string, unknown>) => new Promise<unknown>((resolve) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(self as any).rexCorePlugin.handleMessage(message, {}, resolve)
+    })
+
+    await sendCore({
+      messageType: 'setIdentifier',
+      identifier: 'rex-live-mirror-test-user',
+    })
+    await sendCore({
+      messageType: 'loadInitialConfiguration',
+      configuration: payload,
+    })
+  }, configuration)
 }
 
 /** Clear the captured events array in the service worker. */

@@ -71,11 +71,13 @@ class LLMChatbotBrowserModule extends REXClientModule {
   setup(): void {
     console.log('[LLM Chatbot Browser] Browser module initializing on:', window.location.href)
 
-    // Get configuration from storage
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      try {
-        if (result.REXConfiguration) {
-          const config = result.REXConfiguration
+    chrome.runtime.sendMessage({ messageType: 'fetchConfiguration' })
+      .then((config: Record<string, any> | undefined) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        try {
+          if (!config) {
+            console.warn('[LLM Chatbot Browser] No configuration found')
+            return
+          }
           const llmConfig = config['live_mirror']?.['llm_capture'] ?? config['llm_capture']
 
           console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
@@ -89,18 +91,17 @@ class LLMChatbotBrowserModule extends REXClientModule {
             console.log('[LLM Chatbot Browser] Batch size:', this.batchSize)
             console.log('[LLM Chatbot Browser] Transmission interval:', this.transmissionInterval, 'ms')
 
-            // Determine which chatbot we're on
             this.initializeChatbotCapture(llmConfig)
           } else {
             console.log('[LLM Chatbot Browser] Module disabled in configuration')
           }
-        } else {
-          console.warn('[LLM Chatbot Browser] No configuration found')
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error loading configuration:', error)
         }
-      } catch (error) {
-        console.error('[LLM Chatbot Browser] Error loading configuration:', error)
-      }
-    })
+      })
+      .catch((err) => {
+        console.error('[LLM Chatbot Browser] Error fetching configuration:', err)
+      })
   }
 
   private initializeChatbotCapture(llmConfig: any): void {
@@ -577,23 +578,25 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   }
 
   setup(): void {
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      const config = result.REXConfiguration
-      // Support both nested (live_mirror.page_capture) and flat (page_capture) config keys
-      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
+    chrome.runtime.sendMessage({ messageType: 'fetchConfiguration' })
+      .then((config: Record<string, any> | undefined) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
 
-      if (!pageCaptureConfig?.enabled) {
-        console.log('[Page Capture] page_capture not enabled, skipping')
-        return
-      }
+        if (!pageCaptureConfig?.enabled) {
+          console.log('[Page Capture] page_capture not enabled, skipping')
+          return
+        }
 
-      this.enabled = true
-      this.pageCaptureConfig = pageCaptureConfig
-      this.sources = pageCaptureConfig.sources ?? []
-      console.log('[Page Capture] Enabled. Sources:', this.sources)
+        this.enabled = true
+        this.pageCaptureConfig = pageCaptureConfig
+        this.sources = pageCaptureConfig.sources ?? []
+        console.log('[Page Capture] Enabled. Sources:', this.sources)
 
-      this.initializeCapture()
-    })
+        this.initializeCapture()
+      })
+      .catch((err) => {
+        console.error('[Page Capture] Error fetching configuration:', err)
+      })
   }
 
   private initializeCapture(): void {
