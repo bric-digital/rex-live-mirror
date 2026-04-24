@@ -822,6 +822,8 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   }
 
   private startHomepageCapture(parser: HomepageParser): void {
+    let tickersSent = false
+
     const capture = () => {
       const validation = parser.validateSelectors()
       if (!validation.valid) {
@@ -831,18 +833,51 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
 
       const blurbs = parser.extractBlurbs()
       const newBlurbs = blurbs.filter(b => !this.transmittedHeadlines.has(b.headline))
-      if (newBlurbs.length === 0) return
+
+      // Extract tickers and metadata once per page visit (they're a point-in-time snapshot)
+      let tickers: import('./news/types.js').StockTicker[] | undefined
+      let marketTeaser: import('./news/types.js').MarketTeaser | undefined
+      let breakingNews: string | undefined
+      let quickLinks: string[] | undefined
+      if (!tickersSent) {
+        if (typeof parser.extractTickers === 'function') {
+          tickers = parser.extractTickers()
+          if (tickers.length > 0) {
+            console.log(`[Page Capture] Extracted ${tickers.length} market tickers`)
+          }
+        }
+        if (typeof parser.extractMarketTeaser === 'function') {
+          const teaser = parser.extractMarketTeaser()
+          if (teaser) marketTeaser = teaser
+        }
+        if (typeof parser.extractBreakingNews === 'function') {
+          const bn = parser.extractBreakingNews()
+          if (bn) breakingNews = bn
+        }
+        if (typeof parser.extractQuickLinks === 'function') {
+          const ql = parser.extractQuickLinks()
+          if (ql.length > 0) quickLinks = ql
+        }
+        tickersSent = true
+      }
+
+      // Skip if no new blurbs and no tickers to send
+      if (newBlurbs.length === 0 && !tickers?.length && !marketTeaser && !breakingNews) return
 
       newBlurbs.forEach(b => this.transmittedHeadlines.add(b.headline))
       console.log(`[Page Capture] Sending ${newBlurbs.length} homepage blurbs`)
 
       chrome.runtime.sendMessage({
         messageType: 'homepageBlurbsBatch',
-        source: blurbs[0]?.source ?? 'unknown',
+        source: blurbs[0]?.source ?? newBlurbs[0]?.source ?? 'unknown',
         url: window.location.href,
         domain: window.location.hostname,
         timestamp: Date.now(),
         blurbs: newBlurbs,
+        ...(tickers?.length ? { tickers } : {}),
+        ...(marketTeaser ? { marketTeaser } : {}),
+        ...(breakingNews ? { breakingNews } : {}),
+        ...(quickLinks ? { quickLinks } : {}),
       })
     }
 

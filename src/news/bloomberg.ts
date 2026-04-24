@@ -1,9 +1,10 @@
 /**
  * Bloomberg homepage parser.
- * Extracts headlines using Bloomberg's data-component attributes.
+ * Extracts headlines using data-component attributes, and market tickers from
+ * embedded JSON data (Bloomberg renders tickers client-side from a script blob).
  * Selectors are config-driven — defaults match the current Bloomberg DOM structure.
  */
-import type { HomepageBlurb, HomepageParser, HomepageParserValidation } from './types.js'
+import type { HomepageBlurb, HomepageParser, HomepageParserValidation, StockTicker } from './types.js'
 
 export interface BloombergSelectors {
   storyLink?: string
@@ -11,6 +12,7 @@ export interface BloombergSelectors {
   summary?: string
   byline?: string
   timestamp?: string
+  tickerBarJsonKey?: string
 }
 
 export class BloombergHomepageParser implements HomepageParser {
@@ -23,6 +25,7 @@ export class BloombergHomepageParser implements HomepageParser {
       summary: selectors?.summary ?? '[data-component="summary"]',
       byline: selectors?.byline ?? '[data-component="byline"]',
       timestamp: selectors?.timestamp ?? '[data-component="relative-timestamp"]',
+      tickerBarJsonKey: selectors?.tickerBarJsonKey ?? 'tickerBar',
     }
   }
 
@@ -67,5 +70,83 @@ export class BloombergHomepageParser implements HomepageParser {
     })
 
     return blurbs
+  }
+
+  extractTickers(): StockTicker[] {
+    const jsonKey = this.selectors.tickerBarJsonKey
+    const tickers: StockTicker[] = []
+
+    // Bloomberg embeds ticker data as JSON in a <script> tag, not as DOM elements.
+    // Search all script tags for the tickerBar array.
+    const scripts = Array.from(document.querySelectorAll('script'))
+    for (const script of scripts) {
+      const text = script.textContent ?? ''
+      const keyPattern = `"${jsonKey}":[`
+      const startIdx = text.indexOf(keyPattern)
+      if (startIdx === -1) continue
+
+      // Extract the JSON array starting after the key
+      const arrayStart = startIdx + keyPattern.length - 1
+      let depth = 0
+      let arrayEnd = arrayStart
+      for (let i = arrayStart; i < text.length && i < arrayStart + 10000; i++) {
+        if (text[i] === '[') depth++
+        if (text[i] === ']') depth--
+        if (depth === 0) { arrayEnd = i + 1; break }
+      }
+
+      try {
+        const items = JSON.parse(text.substring(arrayStart, arrayEnd))
+        if (!Array.isArray(items)) continue
+
+        for (const item of items) {
+          const id = item.id ?? item.ticker ?? ''
+          const name = item.name ?? item.longName ?? item.shortName ?? ''
+          const price = item.price
+          const pctChange = item.percentChange1Day
+          const lastYield = item.lastYield
+
+          if (!id || price === undefined || price === null) continue
+
+          const direction = (typeof pctChange === 'number' && pctChange >= 0) ? 'up' as const : 'down' as const
+
+          // For bonds with lastYield, display yield as the price (matches what Bloomberg shows)
+          const isYieldInstrument = typeof lastYield === 'number' && lastYield > 0
+          const displayPrice = isYieldInstrument ? lastYield : price
+          const formattedPrice = typeof displayPrice === 'number'
+            ? displayPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+            : String(displayPrice)
+
+          // Compute absolute change from price and percent: change = price - price / (1 + pct/100)
+          let formattedChange = ''
+          if (typeof pctChange === 'number' && typeof price === 'number' && pctChange !== 0) {
+            const previousPrice = price / (1 + pctChange / 100)
+            const absChange = isYieldInstrument && typeof lastYield === 'number'
+              ? lastYield - lastYield / (1 + pctChange / 100)
+              : price - previousPrice
+            formattedChange = `${absChange >= 0 ? '+' : ''}${absChange.toFixed(2)}`
+          }
+
+          const formattedChangePercent = typeof pctChange === 'number' ? `${pctChange >= 0 ? '+' : ''}${pctChange.toFixed(2)}%` : ''
+
+          tickers.push({
+            symbol: id,
+            name: name || undefined,
+            price: formattedPrice,
+            change: formattedChange,
+            changePercent: formattedChangePercent,
+            direction,
+            url: item.url || `https://www.bloomberg.com/quote/${id}`,
+            category: 'market-index',
+          })
+        }
+
+        break // Found and parsed the tickerBar
+      } catch {
+        // JSON parse failed, try next script
+      }
+    }
+
+    return tickers
   }
 }

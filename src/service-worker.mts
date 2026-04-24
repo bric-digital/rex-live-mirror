@@ -633,6 +633,24 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
         if (now - ts > this.homepageBlurbDedupMs) this.homepageBlurbsSeen.delete(key)
       }
 
+      // Dispatch market tickers as a single snapshot event (not deduplicated — they change constantly)
+      const tickers: any[] = message.tickers ?? [] // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (tickers.length > 0) {
+        dispatchEvent({
+          name: 'news-market-tickers',
+          platform: message.source ?? 'unknown',
+          data_source: 'extension_homepage_capture',
+          url: message.url,
+          domain: message.domain,
+          date: now,
+          tickers,
+          ...(message.marketTeaser ? { marketTeaser: message.marketTeaser } : {}),
+          ...(message.breakingNews ? { breakingNews: message.breakingNews } : {}),
+          ...(message.quickLinks ? { quickLinks: message.quickLinks } : {}),
+        })
+        console.log(`[Discover Capture] Market tickers: ${tickers.length} dispatched`)
+      }
+
       console.log(`[Discover Capture] Homepage blurbs: ${dispatched} dispatched, ${skipped} deduplicated`)
       sendResponse({ success: true })
       return true

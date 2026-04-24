@@ -6,6 +6,7 @@ export interface HomepageBlurb {
   summary?: string
   url: string
   rank: number
+  relatedTickers?: string[]
 }
 
 export interface HomepageParserValidation {
@@ -13,9 +14,30 @@ export interface HomepageParserValidation {
   itemsFound: number
 }
 
+export interface StockTicker {
+  symbol: string
+  name?: string
+  price: string
+  change: string
+  changePercent: string
+  direction: 'up' | 'down'
+  lastUpdated?: string
+  url?: string
+  category?: string
+}
+
+export interface MarketTeaser {
+  headline: string
+  url: string
+}
+
 export interface HomepageParser {
   validateSelectors(): HomepageParserValidation
   extractBlurbs(): HomepageBlurb[]
+  extractTickers?(): StockTicker[]
+  extractMarketTeaser?(): MarketTeaser | null
+  extractBreakingNews?(): string | null
+  extractQuickLinks?(): string[]
 }
 
 export interface HomepageSiteConfig {
