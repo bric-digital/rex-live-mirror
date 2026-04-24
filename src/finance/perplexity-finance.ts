@@ -18,7 +18,8 @@ export class PerplexityFinanceParser {
     const seen = new Set<string>()
     const domains: string[] = []
 
-    marketSummaryContainer.querySelectorAll('img[alt$=" favicon"]').forEach((img) => {
+    const container: Element = marketSummaryContainer
+    container.querySelectorAll('img[alt$=" favicon"]').forEach((img: Element) => {
       const alt = img.getAttribute('alt') ?? ''
       const domain = alt.replace(' favicon', '').trim()
       if (domain && !seen.has(domain)) {

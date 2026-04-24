@@ -167,7 +167,7 @@ export class PerplexityParser {
       }
 
       if (!title) {
-        title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
+        title = element.getAttribute('title') || element.getAttribute('aria-label') || ''
       }
 
       // If title is just a URL or not valid, extract domain as title

@@ -154,7 +154,7 @@ export class ChatGPTParser {
         title = title.replace(/\s+/g, ' ').substring(0, 200)
       }
       if (!title) {
-        title = element.getAttribute('title') || element.getAttribute('aria-label') || undefined
+        title = element.getAttribute('title') || element.getAttribute('aria-label') || ''
       }
 
       // If title is just a URL or not valid, extract domain as title
