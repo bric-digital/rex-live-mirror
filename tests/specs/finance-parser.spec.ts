@@ -2,9 +2,10 @@ import { test, expect } from '@playwright/test'
 
 /**
  * Tier 1: PerplexityFinanceParser unit tests
- * Tests run against the finance-test-page.html fixture which replicates
- * the Market Summary section from the real Perplexity Finance page.
- * The parser is loaded via finance-shim.bundle.js which exposes it on window.__FinanceParser.
+ *
+ * Post-2026 Perplexity Finance DOM uses Google's favicon proxy
+ * (https://www.google.com/s2/favicons?sz=128&domain=<host>) with empty alt
+ * text, so the domain must be parsed from the `src` query string.
  */
 
 test.describe('PerplexityFinanceParser', () => {
@@ -24,15 +25,13 @@ test.describe('PerplexityFinanceParser', () => {
     expect(domains.length).toBe(3)
   })
 
-  test('extracts correct domains from favicon alt text', async ({ page }) => {
+  test('extracts correct domains from favicon proxy src', async ({ page }) => {
     const domains = await page.evaluate(() => {
       const parser = new (window as any).__FinanceParser()
       return parser.extractMarketSummarySources()
     })
 
-    expect(domains[0]).toBe('dailyforex.com')
-    expect(domains[1]).toBe('paybis.com')
-    expect(domains[2]).toBe('investing.com')
+    expect(domains).toEqual(['finance.yahoo.com', 'financemagnates.com', 'investing.com'])
   })
 
   test('only extracts from Market Summary section, not other sections', async ({ page }) => {
@@ -48,8 +47,7 @@ test.describe('PerplexityFinanceParser', () => {
 
   test('returns empty array when Market Summary section not found', async ({ page }) => {
     await page.evaluate(() => {
-      const h2s = document.querySelectorAll('h2')
-      h2s.forEach(h2 => {
+      document.querySelectorAll('h2').forEach(h2 => {
         if (h2.textContent?.trim() === 'Market Summary') {
           h2.closest('.border-subtlest')?.remove()
         }
@@ -65,31 +63,21 @@ test.describe('PerplexityFinanceParser', () => {
   })
 
   test('deduplicates domains', async ({ page }) => {
-    // Add a duplicate favicon to the Market Summary section
     await page.evaluate(() => {
-      const h2s = document.querySelectorAll('h2')
       let container: Element | null = null
-      for (const h2 of h2s) {
+      document.querySelectorAll('h2').forEach(h2 => {
         if (h2.textContent?.trim() === 'Market Summary') {
           container = h2.closest('.border-subtlest')
-          break
         }
-      }
+      })
       if (!container) return
+      const faviconRow = (container as Element).querySelector('.ml-xs.flex')
+      if (!faviconRow) return
 
-      const faviconDiv = container.querySelector('.ml-xs.flex')
-      if (!faviconDiv) return
-
-      // Add a duplicate dailyforex.com favicon
-      const dup = document.createElement('div')
-      dup.innerHTML = `
-        <div class="inline-flex rounded-full" style="width: 14px; height: 14px;">
-          <div class="rounded-full" style="width: 14px; height: 14px;">
-            <img class="relative block" alt="dailyforex.com favicon" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&domain=dailyforex.com">
-          </div>
-        </div>
-      `
-      faviconDiv.appendChild(dup)
+      const dup = document.createElement('img')
+      dup.setAttribute('src', 'https://www.google.com/s2/favicons?sz=128&domain=finance.yahoo.com')
+      dup.setAttribute('alt', '')
+      faviconRow.appendChild(dup)
     })
 
     const domains = await page.evaluate(() => {
@@ -97,24 +85,20 @@ test.describe('PerplexityFinanceParser', () => {
       return parser.extractMarketSummarySources()
     })
 
-    // Should still be 3 (no duplicate)
     expect(domains.length).toBe(3)
-    expect(domains.filter((d: string) => d === 'dailyforex.com').length).toBe(1)
+    expect(domains.filter((d: string) => d === 'finance.yahoo.com').length).toBe(1)
   })
 
   test('returns empty array when no favicons in Market Summary', async ({ page }) => {
-    // Remove all favicon images from Market Summary
     await page.evaluate(() => {
-      const h2s = document.querySelectorAll('h2')
-      for (const h2 of h2s) {
+      document.querySelectorAll('h2').forEach(h2 => {
         if (h2.textContent?.trim() === 'Market Summary') {
           const container = h2.closest('.border-subtlest')
           if (container) {
-            container.querySelectorAll('img[alt$=" favicon"]').forEach(img => img.remove())
+            container.querySelectorAll('img[src*="favicons"]').forEach(img => img.remove())
           }
-          break
         }
-      }
+      })
     })
 
     const domains = await page.evaluate(() => {
