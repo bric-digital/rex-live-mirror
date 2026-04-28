@@ -109,13 +109,14 @@ function extractCitations(card: Element): Citation[] {
  * if no such element is present (e.g. the small text varies across A/B layouts).
  */
 function extractSourceCount(card: Element): number | undefined {
-  const candidates = card.querySelectorAll('div, span')
-  for (const el of candidates) {
+  let count: number | undefined
+  card.querySelectorAll('div, span').forEach((el) => {
+    if (count !== undefined) return
     const text = el.textContent?.trim() ?? ''
     const match = text.match(/^(\d+)\s+sources?$/)
-    if (match) return parseInt(match[1], 10)
-  }
-  return undefined
+    if (match) count = parseInt(match[1], 10)
+  })
+  return count
 }
 
 function rectToPosition(rect: DOMRect): Position {
