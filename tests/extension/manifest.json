@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "REX Live Mirror Test Extension",
+  "version": "0.0.1",
+  "description": "Minimal Chrome extension used by Playwright extension-mode tests. Loads only the rex-live-mirror service worker module.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "service-worker.bundle.js",
+    "type": "module"
+  }
+}

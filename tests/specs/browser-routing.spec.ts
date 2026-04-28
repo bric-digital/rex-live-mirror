@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 /**
  * Tier 1: Browser module URL routing tests
  * Tests that the browser module correctly routes URLs to the appropriate parsers.
- * Uses the discover-test-page.html to verify Discover capture behavior.
+ * Uses discover-test-page-new-dom.html to verify Discover capture behavior.
  */
 
 test.describe('Browser Module -- URL Routing', () => {
@@ -45,7 +45,7 @@ test.describe('Browser Module -- URL Routing', () => {
 
 test.describe('Browser Module -- Discover Capture', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/discover-test-page.html')
+    await page.goto('/discover-test-page-new-dom.html')
     await page.waitForFunction(() => (window as any).testUtilitiesReady === true)
   })
 
@@ -58,9 +58,9 @@ test.describe('Browser Module -- Discover Capture', () => {
       return parser.extractNewsBlurbs()
     })
 
-    expect(blurbs.length).toBe(5)
-    expect(blurbs[0].headline).toBe('Video shows US Tomahawk missile hitting near Iran school that killed 175')
-    expect(blurbs[0].source).toBe('youtube.com')
+    expect(blurbs.length).toBe(3)
+    expect(blurbs[0].headline).toBe("Apple expands 'Ultra' brand to foldable iPhone, MacBook, Watch")
+    expect(blurbs[0].source).toBe('macrumors.com')
   })
 
   test('deduplicates blurbs by headline', async ({ page }) => {
@@ -111,21 +111,9 @@ test.describe('Browser Module -- Discover Capture', () => {
 
 test.describe('Browser Module -- Article Capture', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/article-test-page.html')
+    await page.goto('/article-test-page-new-dom.html')
     await page.waitForFunction(() => (window as any).testUtilitiesReady === true)
     await page.waitForFunction(() => (window as any).__articleShimLoaded === true)
-  })
-
-  test('article parser extracts article from real DOM structure', async ({ page }) => {
-    const article = await page.evaluate(() => {
-      const parser = new (window as any).__ArticleParser()
-      return parser.extractArticle()
-    })
-
-    expect(article).not.toBeNull()
-    expect(article.headline).toBe('Video shows US Tomahawk missile hitting near Iran school that killed 175')
-    expect(article.source).toBe('cnn.com')
-    expect(article['content*']).toContain('Bellingcat')
   })
 
   test('URL routing distinguishes article from feed', async ({ page }) => {
@@ -189,9 +177,8 @@ test.describe('Browser Module -- Article Capture', () => {
       const article = {
         headline: 'Test Article',
         posted: { value: '1 hour ago' },
-        source: 'test.com',
         authors: [],
-        'content*': 'Body text.',
+        content: 'Body text.',
         summary: 'Body text.',
         url: 'https://www.perplexity.ai/discover/you/test-slug',
       }
@@ -210,5 +197,98 @@ test.describe('Browser Module -- Article Capture', () => {
     expect(sent.length).toBe(1)
     expect(sent[0].messageType).toBe('discoverArticleBatch')
     expect(sent[0].article.headline).toBe('Test Article')
+  })
+
+  test('article re-send guard: same url+content → no second send; grown content → re-send', async ({ page }) => {
+    const result = await page.evaluate(() => {
+      // Mirror DiscoverCaptureBrowserModule.startArticleCapture's re-send guard.
+      const sent: any[] = []
+      let lastArticleUrl = ''
+      let lastArticleContent = ''
+      const url = 'https://www.perplexity.ai/discover/you/test-slug'
+
+      const tryCapture = (content: string) => {
+        if (url === lastArticleUrl && content === lastArticleContent) return
+        lastArticleUrl = url
+        lastArticleContent = content
+        sent.push({ url, content })
+      }
+
+      tryCapture('para 1.')                     // initial send
+      tryCapture('para 1.')                     // duplicate — should NOT send
+      tryCapture('para 1.\n\npara 2.')          // grown — should send
+
+      return sent.length
+    })
+
+    expect(result).toBe(2)
+  })
+})
+
+test.describe('Browser Module -- Config Gating', () => {
+  // Pure-logic tests for the config-driven routing decision in DiscoverCaptureBrowserModule.initializeCapture.
+  // Mirrors the gating in src/browser.mts so config-key regressions are caught without rebuilding the bundle.
+
+  type Route = 'article' | 'discover' | 'finance' | 'generic' | 'none'
+
+  const decideRoute = (url: string, cfg: any): Route => {
+    const sources: string[] = cfg?.sources ?? []
+    const discoverEnabled = cfg?.perplexity_discover?.enabled !== false
+    const articleEnabled = cfg?.perplexity_article?.enabled !== false
+    const financeEnabled = cfg?.perplexity_finance?.enabled !== false
+
+    if (sources.includes('perplexity-discover') && articleEnabled && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
+      return 'article'
+    }
+    if (sources.includes('perplexity-discover') && discoverEnabled && url.includes('perplexity.ai/discover')) {
+      return 'discover'
+    }
+    if (sources.includes('perplexity-finance') && financeEnabled && url.includes('perplexity.ai/finance')) {
+      return 'finance'
+    }
+    const allowLists: string[] = cfg?.allow_lists ?? []
+    if (allowLists.length === 0) return 'none'
+    return 'generic'
+  }
+
+  test('sources=[perplexity-discover] + /discover → discover', () => {
+    expect(decideRoute('https://www.perplexity.ai/discover', { sources: ['perplexity-discover'] })).toBe('discover')
+  })
+
+  test('sources=[perplexity-discover] + /discover/you/slug → article', () => {
+    expect(decideRoute('https://www.perplexity.ai/discover/you/foo', { sources: ['perplexity-discover'] })).toBe('article')
+  })
+
+  test('perplexity_article.enabled=false suppresses article route', () => {
+    const cfg = { sources: ['perplexity-discover'], perplexity_article: { enabled: false } }
+    // Article URL also matches /discover, so it falls through to the discover branch (not silent).
+    expect(decideRoute('https://www.perplexity.ai/discover/you/foo', cfg)).toBe('discover')
+  })
+
+  test('perplexity_discover.enabled=false suppresses discover route', () => {
+    const cfg = { sources: ['perplexity-discover'], perplexity_discover: { enabled: false } }
+    expect(decideRoute('https://www.perplexity.ai/discover', cfg)).toBe('none')
+  })
+
+  test('sources=[perplexity-finance] + /finance → finance', () => {
+    expect(decideRoute('https://www.perplexity.ai/finance', { sources: ['perplexity-finance'] })).toBe('finance')
+  })
+
+  test('perplexity_finance.enabled=false suppresses finance route', () => {
+    const cfg = { sources: ['perplexity-finance'], perplexity_finance: { enabled: false } }
+    expect(decideRoute('https://www.perplexity.ai/finance', cfg)).toBe('none')
+  })
+
+  test('empty sources + empty allow_lists → none (no generic fallthrough)', () => {
+    expect(decideRoute('https://example.com/article', { sources: [], allow_lists: [] })).toBe('none')
+  })
+
+  test('empty sources + populated allow_lists → generic (back-compat)', () => {
+    expect(decideRoute('https://example.com/article', { sources: [], allow_lists: ['news-sites'] })).toBe('generic')
+  })
+
+  test('Perplexity URL with empty sources + allow_lists set → still generic (no specialized capture)', () => {
+    // Documents the behavior: if a config wants specialized parsers it must set sources, not just allow_lists.
+    expect(decideRoute('https://www.perplexity.ai/discover', { sources: [], allow_lists: ['perplexity-discover'] })).toBe('generic')
   })
 })

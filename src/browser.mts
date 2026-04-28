@@ -71,11 +71,13 @@ class LLMChatbotBrowserModule extends REXClientModule {
   setup(): void {
     console.log('[LLM Chatbot Browser] Browser module initializing on:', window.location.href)
 
-    // Get configuration from storage
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      try {
-        if (result.REXConfiguration) {
-          const config = result.REXConfiguration
+    chrome.runtime.sendMessage({ messageType: 'fetchConfiguration' })
+      .then((config: Record<string, any> | undefined) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        try {
+          if (!config) {
+            console.warn('[LLM Chatbot Browser] No configuration found')
+            return
+          }
           const llmConfig = config['live_mirror']?.['llm_capture'] ?? config['llm_capture']
 
           console.log('[LLM Chatbot Browser] Configuration loaded:', llmConfig)
@@ -89,18 +91,17 @@ class LLMChatbotBrowserModule extends REXClientModule {
             console.log('[LLM Chatbot Browser] Batch size:', this.batchSize)
             console.log('[LLM Chatbot Browser] Transmission interval:', this.transmissionInterval, 'ms')
 
-            // Determine which chatbot we're on
             this.initializeChatbotCapture(llmConfig)
           } else {
             console.log('[LLM Chatbot Browser] Module disabled in configuration')
           }
-        } else {
-          console.warn('[LLM Chatbot Browser] No configuration found')
+        } catch (error) {
+          console.error('[LLM Chatbot Browser] Error loading configuration:', error)
         }
-      } catch (error) {
-        console.error('[LLM Chatbot Browser] Error loading configuration:', error)
-      }
-    })
+      })
+      .catch((err) => {
+        console.error('[LLM Chatbot Browser] Error fetching configuration:', err)
+      })
   }
 
   private initializeChatbotCapture(llmConfig: any): void {
@@ -570,6 +571,7 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   private sources: string[] = []
   private transmittedHeadlines: Set<string> = new Set()
   private lastArticleUrl: string = ''
+  private lastArticleContent: string = ''
   private pollTimer: ReturnType<typeof setInterval> | null = null
 
   moduleName(): string {
@@ -577,44 +579,49 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   }
 
   setup(): void {
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      const config = result.REXConfiguration
-      // Support both nested (live_mirror.page_capture) and flat (page_capture) config keys
-      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
+    chrome.runtime.sendMessage({ messageType: 'fetchConfiguration' })
+      .then((config: Record<string, any> | undefined) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
 
-      if (!pageCaptureConfig?.enabled) {
-        console.log('[Page Capture] page_capture not enabled, skipping')
-        return
-      }
+        if (!pageCaptureConfig?.enabled) {
+          console.log('[Page Capture] page_capture not enabled, skipping')
+          return
+        }
 
-      this.enabled = true
-      this.pageCaptureConfig = pageCaptureConfig
-      this.sources = pageCaptureConfig.sources ?? []
-      console.log('[Page Capture] Enabled. Sources:', this.sources)
+        this.enabled = true
+        this.pageCaptureConfig = pageCaptureConfig
+        this.sources = pageCaptureConfig.sources ?? []
+        console.log('[Page Capture] Enabled. Sources:', this.sources)
 
-      this.initializeCapture()
-    })
+        this.initializeCapture()
+      })
+      .catch((err) => {
+        console.error('[Page Capture] Error fetching configuration:', err)
+      })
   }
 
   private initializeCapture(): void {
     const url = window.location.href
+    const discoverEnabled = this.pageCaptureConfig?.perplexity_discover?.enabled !== false
+    const articleEnabled = this.pageCaptureConfig?.perplexity_article?.enabled !== false
+    const financeEnabled = this.pageCaptureConfig?.perplexity_finance?.enabled !== false
 
     // Article pages: /discover/you/<slug> — check BEFORE the feed pattern
-    if (this.sources.includes('perplexity-discover') && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
+    if (this.sources.includes('perplexity-discover') && articleEnabled && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
       console.log('[Page Capture] Perplexity article page detected')
       this.startArticleCapture()
       return
     }
 
     // Discover feed: /discover (but not /discover/you/...)
-    if (this.sources.includes('perplexity-discover') && url.includes('perplexity.ai/discover')) {
+    if (this.sources.includes('perplexity-discover') && discoverEnabled && url.includes('perplexity.ai/discover')) {
       console.log('[Page Capture] Perplexity Discover feed detected')
       this.startDiscoverCapture()
       return
     }
 
     // Finance page
-    if (this.sources.includes('perplexity-finance') && url.includes('perplexity.ai/finance')) {
+    if (this.sources.includes('perplexity-finance') && financeEnabled && url.includes('perplexity.ai/finance')) {
       console.log('[Page Capture] Perplexity Finance page detected')
       this.startFinanceCapture()
       return
@@ -628,7 +635,13 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       return
     }
 
-    // Generic Readability-based capture — browser context sends domain; service worker filters by allow_lists
+    // Generic Readability-based capture — only when allow_lists is configured.
+    // SW filters by allow_lists; with none set, generic capture is opt-out by config.
+    const allowLists: string[] = this.pageCaptureConfig?.allow_lists ?? []
+    if (allowLists.length === 0) {
+      console.log('[Page Capture] No allow_lists configured; generic capture disabled for:', url)
+      return
+    }
     console.log('[Page Capture] Using generic Readability capture for:', url)
     this.initializePageCapture(this.pageCaptureConfig)
   }
@@ -734,8 +747,9 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       if (!article) return
 
       // Re-send if URL changed or content grew (progressive loading)
-      if (url === this.lastArticleUrl && article['content*'] === this.lastArticleUrl) return
+      if (url === this.lastArticleUrl && article.content === this.lastArticleContent) return
       this.lastArticleUrl = url
+      this.lastArticleContent = article.content
 
       console.log('[Discover Capture] Sending article:', article.headline)
       chrome.runtime.sendMessage({
@@ -819,6 +833,8 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   }
 
   private startHomepageCapture(parser: HomepageParser): void {
+    let tickersSent = false
+
     const capture = () => {
       const validation = parser.validateSelectors()
       if (!validation.valid) {
@@ -828,18 +844,51 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
 
       const blurbs = parser.extractBlurbs()
       const newBlurbs = blurbs.filter(b => !this.transmittedHeadlines.has(b.headline))
-      if (newBlurbs.length === 0) return
+
+      // Extract tickers and metadata once per page visit (they're a point-in-time snapshot)
+      let tickers: import('./news/types.js').StockTicker[] | undefined
+      let marketTeaser: import('./news/types.js').MarketTeaser | undefined
+      let breakingNews: string | undefined
+      let quickLinks: string[] | undefined
+      if (!tickersSent) {
+        if (typeof parser.extractTickers === 'function') {
+          tickers = parser.extractTickers()
+          if (tickers.length > 0) {
+            console.log(`[Page Capture] Extracted ${tickers.length} market tickers`)
+          }
+        }
+        if (typeof parser.extractMarketTeaser === 'function') {
+          const teaser = parser.extractMarketTeaser()
+          if (teaser) marketTeaser = teaser
+        }
+        if (typeof parser.extractBreakingNews === 'function') {
+          const bn = parser.extractBreakingNews()
+          if (bn) breakingNews = bn
+        }
+        if (typeof parser.extractQuickLinks === 'function') {
+          const ql = parser.extractQuickLinks()
+          if (ql.length > 0) quickLinks = ql
+        }
+        tickersSent = true
+      }
+
+      // Skip if no new blurbs and no tickers to send
+      if (newBlurbs.length === 0 && !tickers?.length && !marketTeaser && !breakingNews) return
 
       newBlurbs.forEach(b => this.transmittedHeadlines.add(b.headline))
       console.log(`[Page Capture] Sending ${newBlurbs.length} homepage blurbs`)
 
       chrome.runtime.sendMessage({
         messageType: 'homepageBlurbsBatch',
-        source: blurbs[0]?.source ?? 'unknown',
+        source: blurbs[0]?.source ?? newBlurbs[0]?.source ?? 'unknown',
         url: window.location.href,
         domain: window.location.hostname,
         timestamp: Date.now(),
         blurbs: newBlurbs,
+        ...(tickers?.length ? { tickers } : {}),
+        ...(marketTeaser ? { marketTeaser } : {}),
+        ...(breakingNews ? { breakingNews } : {}),
+        ...(quickLinks ? { quickLinks } : {}),
       })
     }
 

@@ -3,20 +3,7 @@
  * Extracts a full news article from a Perplexity Discover article page.
  */
 
-export interface ArticleCitation {
-  source: string
-}
-
-export interface NewsArticle {
-  headline: string
-  posted: string
-  summary: string
-  'content*': string
-  url: string
-  source: string
-  citations: ArticleCitation[]
-  authors: string[]
-}
+import { type NewsArticle, type Citation, DateString } from '@bric/rex-types/types'
 
 export interface ArticleSelectors {
   articleContainer?: string
@@ -64,34 +51,89 @@ export class PerplexityArticleParser {
     const headline = headlineEl?.textContent?.trim()
     if (!headline) return null
 
-    const timeEl = container.querySelector('span.truncate')
-    const posted = timeEl?.textContent?.trim() ?? ''
+    const postedEl = container.querySelector('[data-testid="article-published-meta"]')
+    const postedText = postedEl?.parentElement?.querySelector('span.truncate')?.textContent?.trim()
+      ?? container.querySelector('span.truncate')?.textContent?.trim()
+      ?? ''
+    const posted = new DateString(postedText)
 
-    // Collect paragraphs from all prose sections, in document order
-    const paragraphEls = container.querySelectorAll('p')
-    const paragraphs: string[] = []
-    paragraphEls.forEach((p) => {
-      const text = p.textContent?.trim()
-      if (text) paragraphs.push(text)
-    })
-    const content = paragraphs.join('\n\n')
-    const summary = paragraphs[0] ?? ''
+    const content = extractCleanContent(container)
+    const summary = content.split('\n\n')[0] ?? ''
 
-    // Deduplicated favicon sources
-    const seenDomains = new Set<string>()
-    const citations: ArticleCitation[] = []
-    container.querySelectorAll('img[alt$=" favicon"]').forEach((img) => {
-      const alt = img.getAttribute('alt') ?? ''
-      const domain = alt.replace(' favicon', '').trim()
-      if (domain && !seenDomains.has(domain)) {
-        seenDomains.add(domain)
-        citations.push({ source: domain })
-      }
-    })
-
-    const source = citations[0]?.source ?? ''
+    const citations = extractCitations(container)
     const url = window.location.href
 
-    return { headline, posted, summary, 'content*': content, url, source, citations, authors: [] }
+    return { url, headline, posted, authors: [], content, summary, citations }
+  }
+}
+
+/**
+ * Builds the article body text by cloning the container, stripping inline citation
+ * markers (which would otherwise leak as `theinformation+1`-style cruft into the prose),
+ * and joining all `<p>` text. The titles/URLs of those citations are captured separately
+ * via extractCitations().
+ */
+function extractCleanContent(container: Element): string {
+  const clone = container.cloneNode(true) as Element
+  clone.querySelectorAll('span.citation, .citation-nbsp').forEach((node) => node.remove())
+
+  const paragraphs: string[] = []
+  clone.querySelectorAll('p').forEach((p) => {
+    const text = p.textContent?.trim()
+    if (text) paragraphs.push(text)
+  })
+  return paragraphs.join('\n\n')
+}
+
+/**
+ * Extracts citations from a Perplexity Discover article page.
+ *
+ * Each cited source — whether shown inline in the prose or in the trailing source list —
+ * is wrapped in a `<span aria-label="<source title>" data-state="closed">` containing
+ * an `<a target="_blank" href="<source url>">`. Same selector covers both placements;
+ * dedup by URL handles the inline+trailing duplicates Perplexity emits per source.
+ *
+ * Falls through to favicon-proxy domains for any sources that lack the aria-label
+ * wrapper (rare, but the favicon row is always present even for collapsed citations).
+ */
+function extractCitations(container: Element): Citation[] {
+  const seen = new Set<string>()
+  const citations: Citation[] = []
+
+  container.querySelectorAll('[aria-label][data-state="closed"]').forEach((wrapper) => {
+    const link = wrapper.querySelector('a[href^="http"]')
+    if (!link) return
+    const url = link.getAttribute('href') ?? ''
+    if (!url || seen.has(url)) return
+    if (url.includes('perplexity.ai')) return
+
+    const title = wrapper.getAttribute('aria-label')?.trim() ?? ''
+    const source = hostnameOf(url)
+    if (!source) return
+
+    seen.add(url)
+    citations.push({ source, title, url })
+  })
+
+  // Domains-only fallback for favicons not represented by an aria-label wrapper.
+  const seenDomains = new Set(citations.map((c) => c.source))
+  container.querySelectorAll('img[src*="favicons"]').forEach((img) => {
+    const src = img.getAttribute('src') ?? ''
+    const match = src.match(/[?&]domain=([^&]+)/)
+    const domain = match ? decodeURIComponent(match[1]).trim() : ''
+    if (domain && !seenDomains.has(domain)) {
+      seenDomains.add(domain)
+      citations.push({ source: domain, title: '' })
+    }
+  })
+
+  return citations
+}
+
+function hostnameOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '')
+  } catch {
+    return ''
   }
 }

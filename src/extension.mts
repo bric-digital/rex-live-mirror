@@ -26,18 +26,19 @@ class LLMChatbotExtensionModule extends REXExtensionModule {
   setup(): void {
     console.log('[LLM Chatbot Extension] Setup starting...')
 
-    // Get configuration from storage
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      try {
-        if (result.REXConfiguration) {
-          const config = result.REXConfiguration
+    chrome.runtime.sendMessage({ messageType: 'fetchConfiguration' })
+      .then((config: Record<string, any> | undefined) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        try {
+          if (!config) {
+            console.warn('[LLM Chatbot Extension] No configuration found')
+            return
+          }
           const liveMirrorConfig = config['live_mirror']
           const llmConfig = liveMirrorConfig?.['llm_capture']
           const pageCaptureConfig = liveMirrorConfig?.['page_capture']
 
           console.log('[LLM Chatbot Extension] Configuration loaded:', llmConfig)
 
-          // Enable if either llm_capture or page_capture is enabled
           if (llmConfig?.enabled || pageCaptureConfig?.enabled) {
             this.enabled = true
             console.log('[LLM Chatbot Extension] Module enabled via configuration')
@@ -53,13 +54,13 @@ class LLMChatbotExtensionModule extends REXExtensionModule {
           } else {
             console.warn('[LLM Chatbot Extension] Module disabled in configuration')
           }
-        } else {
-          console.warn('[LLM Chatbot Extension] No configuration found in storage')
+        } catch (error) {
+          console.error('[LLM Chatbot Extension] Error loading configuration:', error)
         }
-      } catch (error) {
-        console.error('[LLM Chatbot Extension] Error loading configuration:', error)
-      }
-    })
+      })
+      .catch((err) => {
+        console.error('[LLM Chatbot Extension] Error fetching configuration:', err)
+      })
   }
 
   private initializeUI(): void {

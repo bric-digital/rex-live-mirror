@@ -1,4 +1,5 @@
-import { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
+import { REXConfiguration } from '@bric/rex-core/common'
+import rexCorePlugin, { REXServiceWorkerModule, registerREXModule, dispatchEvent } from '@bric/rex-core/service-worker'
 import * as listUtils from '@bric/rex-lists'
 
 /**
@@ -21,31 +22,30 @@ class LLMChatbotServiceWorkerModule extends REXServiceWorkerModule {
 
   setup(): void {
     console.log('[LLM Chatbot] Service Worker module initializing...')
+    this.refreshConfiguration()
+  }
 
-    // Get configuration
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      if (result.REXConfiguration) {
-        const config = result.REXConfiguration
-        const llmConfig = config['llm_capture']
+  refreshConfiguration(): void {
+    rexCorePlugin.fetchConfiguration()
+      .then((configuration: REXConfiguration | undefined) => {
+        if (configuration !== undefined) {
+          const llmConfig = configuration['llm_capture']
+          if (llmConfig?.enabled) {
+            this.enabled = true
+            this.config = llmConfig
+            console.log('[LLM Chatbot] Service Worker module enabled')
+            console.log('[LLM Chatbot] LLM Capture Config:', llmConfig)
 
-        if (llmConfig?.enabled) {
-          this.enabled = true
-          this.config = llmConfig
-          console.log('[LLM Chatbot] Service Worker module enabled')
-          console.log('[LLM Chatbot] LLM Capture Config:', llmConfig)
-
-          // Initialize ChatGPT capture manager
-          if (llmConfig.platforms?.chatgpt?.enabled) {
-            this.chatGPTCaptureManager = new ChatGPTCaptureManager(
-              llmConfig.platforms.chatgpt
-            )
-            console.log('[LLM Chatbot] ChatGPT capture manager initialized')
+            if (llmConfig.platforms?.chatgpt?.enabled && this.chatGPTCaptureManager === null) {
+              this.chatGPTCaptureManager = new ChatGPTCaptureManager(llmConfig.platforms.chatgpt)
+              console.log('[LLM Chatbot] ChatGPT capture manager initialized')
+            }
+            return
           }
         }
-      }
-    })
-    // Note: Removed storage change listener - using message-based transmission only
-    // to prevent duplicate processing (storage + message would cause 2x dispatches)
+
+        setTimeout(() => { this.refreshConfiguration() }, 1000)
+      })
   }
 
   handleMessage(message:any, sender:any, sendResponse:(response:any) => void):boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -531,25 +531,24 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
 
   setup(): void {
     console.log('[Discover Capture] Service Worker module initializing...')
-    this.loadDedupConfig()
-
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && changes.REXConfiguration) {
-        this.loadDedupConfig()
-      }
-    })
+    this.refreshConfiguration()
   }
 
-  private loadDedupConfig(): void {
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      const config = result.REXConfiguration
-      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
-      const dedupMinutes = pageCaptureConfig?.homepage_blurb_dedup_minutes
-      if (typeof dedupMinutes === 'number' && dedupMinutes > 0) {
-        this.homepageBlurbDedupMs = dedupMinutes * 60 * 1000
-        console.log(`[Discover Capture] Homepage blurb dedup window: ${dedupMinutes} minutes`)
-      }
-    })
+  refreshConfiguration(): void {
+    rexCorePlugin.fetchConfiguration()
+      .then((configuration: REXConfiguration | undefined) => {
+        if (configuration !== undefined) {
+          const pageCaptureConfig = configuration['live_mirror']?.['page_capture'] ?? configuration['page_capture']
+          const dedupMinutes = pageCaptureConfig?.homepage_blurb_dedup_minutes
+          if (typeof dedupMinutes === 'number' && dedupMinutes > 0) {
+            this.homepageBlurbDedupMs = dedupMinutes * 60 * 1000
+            console.log(`[Discover Capture] Homepage blurb dedup window: ${dedupMinutes} minutes`)
+          }
+          return
+        }
+
+        setTimeout(() => { this.refreshConfiguration() }, 1000)
+      })
   }
 
   handleMessage(message: any, sender: any, sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -634,6 +633,24 @@ class DiscoverCaptureServiceWorkerModule extends REXServiceWorkerModule {
         if (now - ts > this.homepageBlurbDedupMs) this.homepageBlurbsSeen.delete(key)
       }
 
+      // Dispatch market tickers as a single snapshot event (not deduplicated — they change constantly)
+      const tickers: any[] = message.tickers ?? [] // eslint-disable-line @typescript-eslint/no-explicit-any
+      if (tickers.length > 0) {
+        dispatchEvent({
+          name: 'news-market-tickers',
+          platform: message.source ?? 'unknown',
+          data_source: 'extension_homepage_capture',
+          url: message.url,
+          domain: message.domain,
+          date: now,
+          tickers,
+          ...(message.marketTeaser ? { marketTeaser: message.marketTeaser } : {}),
+          ...(message.breakingNews ? { breakingNews: message.breakingNews } : {}),
+          ...(message.quickLinks ? { quickLinks: message.quickLinks } : {}),
+        })
+        console.log(`[Discover Capture] Market tickers: ${tickers.length} dispatched`)
+      }
+
       console.log(`[Discover Capture] Homepage blurbs: ${dispatched} dispatched, ${skipped} deduplicated`)
       sendResponse({ success: true })
       return true
@@ -664,45 +681,41 @@ class PageCaptureServiceWorkerModule extends REXServiceWorkerModule {
 
   setup(): void {
     console.log('[Page Capture] Service Worker module initializing...')
-    this.loadConfiguration()
-
-    // React to configuration changes (e.g., after initial config load or server refresh)
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && changes.REXConfiguration) {
-        console.log('[Page Capture] REXConfiguration changed, reloading...')
-        this.loadConfiguration()
-      }
-    })
+    this.refreshConfiguration()
   }
 
-  private loadConfiguration(): void {
-    chrome.storage.local.get('REXConfiguration', (result) => {
-      const config = result.REXConfiguration
-      const pageCaptureConfig = config?.['live_mirror']?.['page_capture'] ?? config?.['page_capture']
+  refreshConfiguration(): void {
+    rexCorePlugin.fetchConfiguration()
+      .then((configuration: REXConfiguration | undefined) => {
+        if (configuration === undefined) {
+          setTimeout(() => { this.refreshConfiguration() }, 1000)
+          return
+        }
 
-      if (!pageCaptureConfig?.enabled) {
-        console.log('[Page Capture] page_capture not enabled')
-        return
-      }
+        const pageCaptureConfig = configuration['live_mirror']?.['page_capture'] ?? configuration['page_capture']
 
-      this.enabled = true
-      this.allowLists = pageCaptureConfig.allow_lists ?? []
-      console.log('[Page Capture] Service Worker enabled. Allow lists:', this.allowLists)
+        if (!pageCaptureConfig?.enabled) {
+          console.log('[Page Capture] page_capture not enabled')
+          return
+        }
 
-      if (this.allowLists.length > 0) {
-        const listsConfig = config?.['lists']
-        listUtils.initializeListDatabase()
-          .then(() => {
-            console.log('[Page Capture] List database initialized')
-            // Sync list entries from config into IndexedDB so allow_list matching works
-            if (listsConfig && typeof listsConfig === 'object' && !Array.isArray(listsConfig)) {
-              return listUtils.parseAndSyncLists(listsConfig as Parameters<typeof listUtils.parseAndSyncLists>[0])
-            }
-          })
-          .then(() => { console.log('[Page Capture] Lists synced from configuration') })
-          .catch(err => console.warn('[Page Capture] Failed to initialize list database:', err))
-      }
-    })
+        this.enabled = true
+        this.allowLists = pageCaptureConfig.allow_lists ?? []
+        console.log('[Page Capture] Service Worker enabled. Allow lists:', this.allowLists)
+
+        if (this.allowLists.length > 0) {
+          const listsConfig = configuration['lists']
+          listUtils.initializeListDatabase()
+            .then(() => {
+              console.log('[Page Capture] List database initialized')
+              if (listsConfig && typeof listsConfig === 'object' && !Array.isArray(listsConfig)) {
+                return listUtils.parseAndSyncLists(listsConfig as Parameters<typeof listUtils.parseAndSyncLists>[0])
+              }
+            })
+            .then(() => { console.log('[Page Capture] Lists synced from configuration') })
+            .catch(err => console.warn('[Page Capture] Failed to initialize list database:', err))
+        }
+      })
   }
 
   handleMessage(message: any, sender: any, sendResponse: (response: any) => void): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
