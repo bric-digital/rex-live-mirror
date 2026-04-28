@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 /**
  * Tier 1: Browser module URL routing tests
  * Tests that the browser module correctly routes URLs to the appropriate parsers.
- * Uses the discover-test-page.html to verify Discover capture behavior.
+ * Uses discover-test-page-new-dom.html to verify Discover capture behavior.
  */
 
 test.describe('Browser Module -- URL Routing', () => {
@@ -45,7 +45,7 @@ test.describe('Browser Module -- URL Routing', () => {
 
 test.describe('Browser Module -- Discover Capture', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/discover-test-page.html')
+    await page.goto('/discover-test-page-new-dom.html')
     await page.waitForFunction(() => (window as any).testUtilitiesReady === true)
   })
 
@@ -58,9 +58,9 @@ test.describe('Browser Module -- Discover Capture', () => {
       return parser.extractNewsBlurbs()
     })
 
-    expect(blurbs.length).toBe(5)
-    expect(blurbs[0].headline).toBe('Video shows US Tomahawk missile hitting near Iran school that killed 175')
-    expect(blurbs[0].source).toBe('youtube.com')
+    expect(blurbs.length).toBe(3)
+    expect(blurbs[0].headline).toBe("Apple expands 'Ultra' brand to foldable iPhone, MacBook, Watch")
+    expect(blurbs[0].source).toBe('macrumors.com')
   })
 
   test('deduplicates blurbs by headline', async ({ page }) => {

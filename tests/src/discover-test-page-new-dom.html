@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Discover Mock Page (new DOM)</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; }
+    </style>
+</head>
+<body>
+    <!-- Mock of the post-2026 Perplexity Discover DOM:
+         favicons are loaded from Google's favicon proxy with `?domain=...` query param
+         and have empty alt text. "N sources" appears in a small text element next to the icons. -->
+    <div data-testid="discover-you" class="ease flex grid-cols-12 duration-150 md:grid flex-col">
+      <div class="col-span-12 w-full">
+        <div class="gap-md pb-lg flex grid-cols-3 flex-col md:grid">
+
+          <!-- Card 1: WIDE (col-span-3 — full width hero) -->
+          <div class="col-span-3 border-subtlest">
+            <a class="group/card block h-full outline-none" href="/discover/you/apple-expands-ultra-brand-to-f-oOiUCls" style="display: block; width: 900px; height: 300px;">
+              <div class="group relative h-full">
+                <div data-testid="thread-title">Apple expands 'Ultra' brand to foldable iPhone, MacBook, Watch</div>
+                <span class="truncate">2 hours ago</span>
+                <div class="line-clamp-6">The company's first foldable phone is expected to launch as the iPhone Ultra in September.</div>
+                <div class="gap-x-sm flex grow items-center">
+                  <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                    <div class="ml-xs flex">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=macrumors.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=youtube.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=forbes.com">
+                    </div>
+                  </div>
+                  <div class="font-sans text-xs font-medium text-quiet truncate">29 sources</div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Card 2: NARROW (default 1/3 width) -->
+          <div class="border-subtlest">
+            <a class="group/card block h-full outline-none" href="/discover/you/sec-chair-calls-for-blockchain-x4REqQKKR5CmMcqk5DCgdA" style="display: block; width: 290px; height: 400px;">
+              <div class="group relative h-full">
+                <div data-testid="thread-title">SEC chair calls for blockchain-powered instant stock settlement</div>
+                <div class="line-clamp-6">SEC chair signals support for instant blockchain settlement.</div>
+                <div class="gap-x-sm flex grow items-center">
+                  <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                    <div class="ml-xs flex">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=news.bitcoin.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=bitcoinmagazine.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=securitiesdocket.com">
+                    </div>
+                  </div>
+                  <div class="font-sans text-xs font-medium text-quiet truncate">15 sources</div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          <!-- Card 3: NARROW. Duplicate domain in favicons to verify dedup -->
+          <div class="border-subtlest">
+            <a class="group/card block h-full outline-none" href="/discover/you/uae-exits-opec-and-opec-effect-OARZX5BYSzWPOU0262NekQ" style="display: block; width: 290px; height: 400px;">
+              <div class="group relative h-full">
+                <div data-testid="thread-title">UAE exits OPEC and OPEC+ effective May 1, fracturing oil alliance</div>
+                <div class="line-clamp-6">The UAE plans to leave OPEC.</div>
+                <div class="gap-x-sm flex grow items-center">
+                  <div aria-hidden="true" class="gap-xs relative flex shrink-0 items-center">
+                    <div class="ml-xs flex">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=reuters.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=reuters.com">
+                      <img aria-hidden="true" alt="" width="14" height="14" src="https://www.google.com/s2/favicons?sz=128&amp;domain=cnbc.com">
+                    </div>
+                  </div>
+                  <div class="font-sans text-xs font-medium text-quiet truncate">69 sources</div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.testUtilitiesReady = true;
+    </script>
+    <script type="module" src="build/discover-shim.bundle.js"></script>
+</body>
+</html>
