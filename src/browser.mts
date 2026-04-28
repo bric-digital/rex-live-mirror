@@ -571,6 +571,7 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
   private sources: string[] = []
   private transmittedHeadlines: Set<string> = new Set()
   private lastArticleUrl: string = ''
+  private lastArticleContent: string = ''
   private pollTimer: ReturnType<typeof setInterval> | null = null
 
   moduleName(): string {
@@ -601,23 +602,26 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
 
   private initializeCapture(): void {
     const url = window.location.href
+    const discoverEnabled = this.pageCaptureConfig?.perplexity_discover?.enabled !== false
+    const articleEnabled = this.pageCaptureConfig?.perplexity_article?.enabled !== false
+    const financeEnabled = this.pageCaptureConfig?.perplexity_finance?.enabled !== false
 
     // Article pages: /discover/you/<slug> — check BEFORE the feed pattern
-    if (this.sources.includes('perplexity-discover') && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
+    if (this.sources.includes('perplexity-discover') && articleEnabled && /perplexity\.ai\/discover\/you\/.+/.test(url)) {
       console.log('[Page Capture] Perplexity article page detected')
       this.startArticleCapture()
       return
     }
 
     // Discover feed: /discover (but not /discover/you/...)
-    if (this.sources.includes('perplexity-discover') && url.includes('perplexity.ai/discover')) {
+    if (this.sources.includes('perplexity-discover') && discoverEnabled && url.includes('perplexity.ai/discover')) {
       console.log('[Page Capture] Perplexity Discover feed detected')
       this.startDiscoverCapture()
       return
     }
 
     // Finance page
-    if (this.sources.includes('perplexity-finance') && url.includes('perplexity.ai/finance')) {
+    if (this.sources.includes('perplexity-finance') && financeEnabled && url.includes('perplexity.ai/finance')) {
       console.log('[Page Capture] Perplexity Finance page detected')
       this.startFinanceCapture()
       return
@@ -631,7 +635,13 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       return
     }
 
-    // Generic Readability-based capture — browser context sends domain; service worker filters by allow_lists
+    // Generic Readability-based capture — only when allow_lists is configured.
+    // SW filters by allow_lists; with none set, generic capture is opt-out by config.
+    const allowLists: string[] = this.pageCaptureConfig?.allow_lists ?? []
+    if (allowLists.length === 0) {
+      console.log('[Page Capture] No allow_lists configured; generic capture disabled for:', url)
+      return
+    }
     console.log('[Page Capture] Using generic Readability capture for:', url)
     this.initializePageCapture(this.pageCaptureConfig)
   }
@@ -737,8 +747,9 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       if (!article) return
 
       // Re-send if URL changed or content grew (progressive loading)
-      if (url === this.lastArticleUrl && article['content*'] === this.lastArticleUrl) return
+      if (url === this.lastArticleUrl && article['content*'] === this.lastArticleContent) return
       this.lastArticleUrl = url
+      this.lastArticleContent = article['content*']
 
       console.log('[Discover Capture] Sending article:', article.headline)
       chrome.runtime.sendMessage({
