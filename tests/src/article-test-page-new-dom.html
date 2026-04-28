@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perplexity Discover Article Mock Page (new DOM)</title>
+    <style>body { font-family: sans-serif; margin: 0; padding: 20px; }</style>
+</head>
+<body>
+    <main data-testid="article-main">
+
+      <!-- Headline -->
+      <div class="prose">
+        <h2 class="font-editorial md:!text-[2.3rem] font-serif text-3xl">
+          <span class="rounded-md font-editorial">Tencent used Anthropic's Claude to fine-tune its new Hy3 AI model</span>
+        </h2>
+      </div>
+
+      <!-- Published meta -->
+      <div>
+        <div data-testid="article-published-meta">Published</div>
+        <span class="truncate">2 hours ago</span>
+      </div>
+
+      <!-- Paragraphs with inline citations -->
+      <div class="prose">
+        <p>
+          Tencent employees used Anthropic's Claude chatbot to help fine-tune the company's
+          latest Hy3 artificial intelligence model, according to a report published Tuesday.<span class="citation-nbsp"></span><span class="inline-flex" aria-label="Tencent's New Model Shows Improvement, Partly Thanks to Anthropic" data-state="closed"><span class="citation inline"><a target="_blank" rel="noopener" href="https://www.theinformation.com/articles/tencents-new-model-shows-improvement-partly-thanks-anthropic"><span>theinformation</span></a></span></span>
+        </p>
+        <p>
+          Tencent released Hy3 preview last week as a 295-billion-parameter Mixture-of-Experts model.<span class="citation-nbsp"></span><span class="inline-flex" aria-label="Tencent Unveils Hy3 preview; Model Enhances Agent Capabilities" data-state="closed"><span class="citation inline"><a target="_blank" rel="noopener" href="https://www.tencent.com/en-us/articles/2202320.html"><span>tencent+3</span></a></span></span>
+        </p>
+        <p>
+          Anthropic publicly accused three Chinese AI firms of running distillation campaigns.<span class="citation-nbsp"></span><span class="inline-flex" aria-label="Anthropic flags distillation by Chinese firms" data-state="closed"><span class="citation inline"><a target="_blank" rel="noopener" href="https://www.reuters.com/anthropic-distillation-claims"><span>reuters+1</span></a></span></span>
+        </p>
+      </div>
+
+      <!-- Trailing source list — same aria-label/data-state pattern, no inline-prose context.
+           One of these duplicates a URL from the inline list (theinformation) to verify dedup. -->
+      <section>
+        <span class="inline-flex" aria-label="Tencent's New Model Shows Improvement, Partly Thanks to Anthropic" data-state="closed">
+          <a target="_blank" rel="noopener" href="https://www.theinformation.com/articles/tencents-new-model-shows-improvement-partly-thanks-anthropic">theinformation</a>
+        </span>
+        <span class="inline-flex" aria-label="Former OpenAI research scientist launches new AI model for Tencent" data-state="closed">
+          <a target="_blank" rel="noopener" href="https://www.computerworld.com/article/4163293/former-openai-research-scientist-launches-new-ai-model-for-tencent-2.html">computerworld</a>
+        </span>
+        <span class="inline-flex" aria-label="Tencent's New Hy3 AI Model Is the Most Efficient Chinese LLM" data-state="closed">
+          <a target="_blank" rel="noopener" href="https://tech.yahoo.com/ai/gemini/articles/tencents-hy3-ai-model-most-181808277.html">yahoo</a>
+        </span>
+        <!-- UI element with same aria-label/data-state pattern but no external href: must NOT be picked up. -->
+        <span class="inline-flex" aria-label="Bookmark" data-state="closed">
+          <button>Bookmark</button>
+        </span>
+        <!-- An internal perplexity.ai href: must NOT be picked up as a citation. -->
+        <span class="inline-flex" aria-label="Perplexity related thread" data-state="closed">
+          <a target="_blank" rel="noopener" href="https://www.perplexity.ai/discover/you/some-other-article">related</a>
+        </span>
+      </section>
+
+      <!-- Favicon row — additional domains beyond what's in the citation aria-labels.
+           cnbc.com appears here only and should be picked up by the favicon fallback. -->
+      <div>
+        <img src="https://www.google.com/s2/favicons?sz=128&amp;domain=anthropic.com" alt="">
+        <img src="https://www.google.com/s2/favicons?sz=128&amp;domain=cnbc.com" alt="">
+        <img src="https://www.google.com/s2/favicons?sz=128&amp;domain=theinformation.com" alt="">
+      </div>
+
+    </main>
+
+    <script type="module">
+      window.__sentMessages = [];
+      window.chrome = window.chrome || {
+        runtime: {
+          getManifest: () => ({ name: 'Test' }),
+          sendMessage: (msg) => { window.__sentMessages.push(msg); },
+          onMessage: { addListener: () => {} }
+        },
+        storage: {
+          local: { _data: {}, get: async () => ({}), set: async () => {}, remove: async () => {}, clear: async () => {} },
+          onChanged: { _listeners: [], addListener: () => {} }
+        }
+      };
+      window.testUtilitiesReady = true;
+    </script>
+    <script type="module" src="build/article-shim.bundle.js"></script>
+</body>
+</html>

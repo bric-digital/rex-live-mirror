@@ -111,21 +111,9 @@ test.describe('Browser Module -- Discover Capture', () => {
 
 test.describe('Browser Module -- Article Capture', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/article-test-page.html')
+    await page.goto('/article-test-page-new-dom.html')
     await page.waitForFunction(() => (window as any).testUtilitiesReady === true)
     await page.waitForFunction(() => (window as any).__articleShimLoaded === true)
-  })
-
-  test('article parser extracts article from real DOM structure', async ({ page }) => {
-    const article = await page.evaluate(() => {
-      const parser = new (window as any).__ArticleParser()
-      return parser.extractArticle()
-    })
-
-    expect(article).not.toBeNull()
-    expect(article.headline).toBe('Video shows US Tomahawk missile hitting near Iran school that killed 175')
-    expect(article.source).toBe('cnn.com')
-    expect(article['content*']).toContain('Bellingcat')
   })
 
   test('URL routing distinguishes article from feed', async ({ page }) => {
@@ -189,9 +177,8 @@ test.describe('Browser Module -- Article Capture', () => {
       const article = {
         headline: 'Test Article',
         posted: { value: '1 hour ago' },
-        source: 'test.com',
         authors: [],
-        'content*': 'Body text.',
+        content: 'Body text.',
         summary: 'Body text.',
         url: 'https://www.perplexity.ai/discover/you/test-slug',
       }

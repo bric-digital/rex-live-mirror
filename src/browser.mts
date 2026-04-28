@@ -747,9 +747,9 @@ class DiscoverCaptureBrowserModule extends REXClientModule {
       if (!article) return
 
       // Re-send if URL changed or content grew (progressive loading)
-      if (url === this.lastArticleUrl && article['content*'] === this.lastArticleContent) return
+      if (url === this.lastArticleUrl && article.content === this.lastArticleContent) return
       this.lastArticleUrl = url
-      this.lastArticleContent = article['content*']
+      this.lastArticleContent = article.content
 
       console.log('[Discover Capture] Sending article:', article.headline)
       chrome.runtime.sendMessage({
